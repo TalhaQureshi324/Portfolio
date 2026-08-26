@@ -1,0 +1,10 @@
+import { chromium } from "playwright-core";
+const browser = await chromium.launch({ channel: "msedge", headless: true });
+const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+await page.goto("http://localhost:3100/", { waitUntil: "networkidle" });
+await page.waitForTimeout(2000);
+await page.locator("#projects").scrollIntoViewIfNeeded();
+await page.waitForTimeout(1500);
+await page.screenshot({ path: "D:/Semester 07/Personal Portfolio/shots/06-ambience.png" });
+await browser.close();
+console.log("done");
