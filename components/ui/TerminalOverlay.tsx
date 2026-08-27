@@ -74,7 +74,7 @@ export default function TerminalOverlay() {
               </div>
             </div>
             <div className="min-h-0 flex-1">
-              <Terminal onClose={() => setOpen(false)} />
+              <Terminal focusOnMount onClose={() => setOpen(false)} />
             </div>
           </motion.div>
         </>

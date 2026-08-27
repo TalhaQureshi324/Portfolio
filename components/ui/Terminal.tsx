@@ -61,9 +61,13 @@ const HELP_TEXT = [
 interface TerminalProps {
   onClose?: () => void;
   autoOpenBoot?: boolean;
+  /** Focus the prompt on mount — only for terminals that open intentionally
+   *  (the overlay drawer). Embedded terminals must NOT autofocus, or the
+   *  browser scrolls the page to them on load. */
+  focusOnMount?: boolean;
 }
 
-export default function Terminal({ onClose, autoOpenBoot = true }: TerminalProps) {
+export default function Terminal({ onClose, autoOpenBoot = true, focusOnMount = false }: TerminalProps) {
   const [lines, setLines] = useState<Line[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -89,6 +93,11 @@ export default function Terminal({ onClose, autoOpenBoot = true }: TerminalProps
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [lines]);
+
+  // Focus only when explicitly requested (overlay opening) — never on page load
+  useEffect(() => {
+    if (focusOnMount) inputRef.current?.focus();
+  }, [focusOnMount]);
 
   const push = (...newLines: Array<[LineKind, string]>) =>
     setLines((prev) => [...prev, ...newLines.map(([k, t]) => nextLine(k, t))]);
@@ -256,7 +265,6 @@ export default function Terminal({ onClose, autoOpenBoot = true }: TerminalProps
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={onKeyDown}
             disabled={busy}
-            autoFocus
             spellCheck={false}
             autoComplete="off"
             aria-label="Terminal input"

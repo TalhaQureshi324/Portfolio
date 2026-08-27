@@ -1,0 +1,10 @@
+import { chromium } from "playwright-core";
+const browser = await chromium.launch({ channel: "msedge", headless: true });
+const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+await page.goto("http://localhost:3100/", { waitUntil: "networkidle" });
+await page.waitForTimeout(2500);
+const scrollY = await page.evaluate(() => window.scrollY);
+const active = await page.evaluate(() => document.activeElement?.tagName + "." + (document.activeElement?.className?.slice?.(0, 40) ?? ""));
+console.log("scrollY after load:", scrollY, scrollY === 0 ? "✅ opens at TOP" : "❌ NOT at top");
+console.log("focused element:", active);
+await browser.close();
