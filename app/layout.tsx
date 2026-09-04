@@ -1,41 +1,51 @@
 import type { Metadata, Viewport } from "next";
-import { GeistSans } from "geist/font/sans";
-import { JetBrains_Mono } from "next/font/google";
+import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";
 import LenisProvider from "@/components/providers/LenisProvider";
 import Navigation from "@/components/sections/Navigation";
-import TerminalOverlay from "@/components/ui/TerminalOverlay";
+import Footer from "@/components/sections/Footer";
 import "@/styles/globals.css";
+
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-fraunces",
+  display: "swap",
+});
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
 
 const jetbrains = JetBrains_Mono({
   subsets: ["latin"],
-  variable: "--font-jetbrains-mono",
+  variable: "--font-jetbrains",
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Talha Qureshi — AI Systems Engineer & Full-Stack Architect",
+  title: "Muhammad Talha Qureshi — AI/ML Engineer & Full-Stack Developer",
   description:
-    "Engineering scalable AI pipelines and production-grade full-stack applications. Deep Learning (CV, NLP), distributed backends, and high-conversion frontends.",
+    "I build AI-powered products end to end — computer-vision screening systems, NLP pipelines and automation, and the web applications that deliver them.",
   keywords: [
     "AI Engineer",
-    "Full-Stack Architect",
     "Machine Learning",
-    "Next.js",
-    "PyTorch",
-    "Deepfake Detection",
+    "Full-Stack Developer",
+    "Computer Vision",
     "NLP",
+    "Portfolio",
   ],
-  authors: [{ name: "Talha Qureshi" }],
+  authors: [{ name: "Muhammad Talha Qureshi" }],
   openGraph: {
-    title: "Talha Qureshi — AI Systems Engineer & Full-Stack Architect",
+    title: "Muhammad Talha Qureshi — AI/ML Engineer & Full-Stack Developer",
     description:
-      "Engineering scalable AI pipelines and production-grade full-stack applications.",
+      "I build AI-powered products end to end — from computer vision to shipping web applications.",
     type: "website",
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#090A0F",
+  themeColor: "#FAF9F5",
   width: "device-width",
   initialScale: 1,
 };
@@ -44,13 +54,16 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${GeistSans.variable} ${jetbrains.variable}`}>
-      <body className="bg-obsidian font-sans text-slate-300 antialiased">
+    <html
+      lang="en"
+      className={`${fraunces.variable} ${inter.variable} ${jetbrains.variable}`}
+    >
+      <body className="bg-paper font-sans text-ink antialiased">
         <LenisProvider>
           <Navigation />
           {children}
-          <TerminalOverlay />
-          <div className="noise-overlay" aria-hidden="true" />
+          <Footer />
+          <div className="grain" aria-hidden="true" />
         </LenisProvider>
       </body>
     </html>

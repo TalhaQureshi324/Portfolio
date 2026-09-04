@@ -9,13 +9,8 @@ export function cn(...inputs: ClassValue[]) {
 export function scrollToSection(id: string) {
   const lenis = (window as unknown as { __lenis?: { scrollTo: (t: string, o?: object) => void } }).__lenis;
   if (lenis) {
-    lenis.scrollTo(`#${id}`, { offset: -84, duration: 1.4 });
+    lenis.scrollTo(`#${id}`, { offset: -72, duration: 1.3 });
   } else {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   }
-}
-
-/** Open the global terminal overlay from anywhere */
-export function openTerminal() {
-  window.dispatchEvent(new CustomEvent("portfolio:open-terminal"));
 }

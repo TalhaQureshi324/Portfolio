@@ -14,6 +14,17 @@ import { NextResponse } from "next/server";
 
 const OWNER_EMAIL = "iamtalhaqureshi849@gmail.com";
 
+/** Escape user input before it enters the HTML email body —
+ *  prevents injected markup/scripts reaching the owner's inbox. */
+function esc(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 interface ContactPayload {
   name?: string;
   email?: string;
@@ -33,17 +44,17 @@ function buildEmailHtml(p: Required<Pick<ContactPayload, "name" | "email" | "mes
   return `<!DOCTYPE html>
 <html><body style="margin:0;background:#f3f4f6;padding:24px">
   <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb">
-    <div style="background:#090A0F;padding:18px 20px">
-      <p style="margin:0;font:600 15px -apple-system,Segoe UI,Roboto,sans-serif;color:#00F2FE">New portfolio message</p>
-      <p style="margin:4px 0 0;font:400 12px -apple-system,Segoe UI,Roboto,sans-serif;color:#9CA3AF">talha.dev — contact form relay</p>
+    <div style="background:#1A1915;padding:18px 20px">
+      <p style="margin:0;font:600 15px -apple-system,Segoe UI,Roboto,sans-serif;color:#FAF9F5">New portfolio message</p>
+      <p style="margin:4px 0 0;font:400 12px -apple-system,Segoe UI,Roboto,sans-serif;color:#9B958A">portfolio contact relay</p>
     </div>
     <table style="width:100%;border-collapse:collapse">
-      ${row("Name", p.name)}
-      ${row("Email", `<a href="mailto:${p.email}" style="color:#2563EB">${p.email}</a>`)}
-      ${row("Scope", p.scope ?? "—")}
-      ${row("Budget", p.budget ?? "—")}
+      ${row("Name", esc(p.name))}
+      ${row("Email", `<a href="mailto:${esc(p.email)}" style="color:#2563EB">${esc(p.email)}</a>`)}
+      ${row("Scope", p.scope ? esc(p.scope) : "—")}
+      ${row("Budget", p.budget ? esc(p.budget) : "—")}
       ${row("Via", p.source === "cli" ? "Interactive terminal" : "Contact form")}
-      ${row("Message", p.message.replace(/\n/g, "<br/>"))}
+      ${row("Message", esc(p.message).replace(/\n/g, "<br/>"))}
     </table>
     <div style="padding:14px 20px;background:#F9FAFB">
       <p style="margin:0;font:400 11px -apple-system,Segoe UI,Roboto,sans-serif;color:#6B7280">Hit “Reply” in your mail client to answer directly — the sender's address is attached.</p>

@@ -49,13 +49,13 @@ A single-page application engineered like a product, not a template. Every secti
 
 | ID | Module | What's inside |
 |----|--------|---------------|
-| `00` | **Operator Profile** | Metrics-driven About — bio, stat tiles, live facts panel |
-| `01` | **Capability Matrix** | Bento grid with *live* micro-systems: ML inference pipeline visualizer, request-throughput monitor, Lighthouse theme switcher, self-updating k8s pod board |
-| `02` | **Flagship Systems** | Six engineering case studies — incl. a real-time malaria screening split-view (detection boxes + parasitemia gauge) and an n8n orchestration graph with pulsing data packets |
-| `03` | **Live Sandbox** | Inference capacity planner — tune batch / quantization / concurrency / GPU tier and watch memory, RPS, latency & cost respond |
-| `04` | **Trajectory** | Glowing milestone timeline — Intellimind, Dev Weekends, Code Alpha, TA roles, FYP research |
-| `05` | **Establish Uplink** | Dual-mode contact: standard form **+ a real interactive CLI** (`help`, `skills --all`, `contact --name=…`) — both deliver to Gmail |
-| `--` | **Hero** | React Three Fiber particle node field reacting to cursor velocity & scroll, behind a live operator portrait card |
+| `01` | **Selected Work** | Featured editorial case study — the malaria screening FYP, with a real pipeline diagram and results in measurement context |
+| `02` | **Project Index** | Five further systems as an editorial ledger — automation, deepfake detection, NLP, commerce, voice |
+| `03` | **About** | A human profile — who I am, what I work on, how I approach engineering |
+| `04` | **Experience** | Intellimind, Dev Weekends, Code Alpha, TA roles — clean typographic ledger |
+| `05` | **Expertise** | Six capability categories, restrained and credible |
+| `06` | **Contact** | Honest form → validated serverless route → my Gmail via Resend |
+| `--` | **Hero** | Typography-led editorial opening with choreographed masked-line entrance |
 
 ---
 
@@ -79,12 +79,13 @@ $ npm run start      # serve production build
 [![React 19](https://img.shields.io/badge/React_19-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://typescriptlang.org)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_3-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
-[![Three.js](https://img.shields.io/badge/Three.js_+_R3F-049EF4?style=flat-square&logo=threedotjs&logoColor=white)](https://threejs.org)
+[![Fraunces](https://img.shields.io/badge/Fraunces_serif-1A1915?style=flat-square)](https://fonts.google.com/specimen/Fraunces)
 [![Framer Motion](https://img.shields.io/badge/Framer_Motion_12-E100FF?style=flat-square&logo=framer&logoColor=white)](https://motion.dev)
 [![Lenis](https://img.shields.io/badge/Lenis_smooth_scroll-11131F?style=flat-square)](https://lenis.darkroom.engineering)
+[![Resend](https://img.shields.io/badge/Mail_via-Resend-000000?style=flat-square)](https://resend.com)
 [![Vercel](https://img.shields.io/badge/Deployed_on-Vercel-000000?style=flat-square&logo=vercel&logoColor=white)](https://vercel.com)
 
-Performance profile: **~180 kB first-load JS** — the entire Three.js scene lazy-loads below the fold, animations run on GPU-only properties (`transform` / `opacity`), and every section animates in with expo-curve viewport triggers.
+Design system: **Editorial Light** — warm paper `#FAF9F5`, charcoal ink `#1A1915`, one burnt-sienna accent `#B4442C`. Fraunces for display, Inter for body, JetBrains Mono for metadata only. **~159 kB first-load JS** — transform/opacity-only motion, WCAG-AA text contrast, full `prefers-reduced-motion` support.
 
 ---
 
@@ -93,22 +94,21 @@ Performance profile: **~180 kB first-load JS** — the entire Three.js scene laz
 ```
 Portfolio/
 ├── app/
-│   ├── layout.tsx               # fonts · Lenis provider · noise overlay
+│   ├── layout.tsx               # fonts (Fraunces · Inter · JetBrains Mono) · Lenis · grain
 │   ├── page.tsx                 # section composition
-│   ├── icon.svg                 # >_ monogram favicon
-│   └── api/contact/route.ts     # serverless → Resend → Gmail relay
+│   ├── icon.svg                 # TQ monogram favicon
+│   └── api/contact/route.ts     # validated serverless → Resend → Gmail relay
 ├── components/
-│   ├── 3d/                      # R3F particle node field (lazy, IO-gated)
 │   ├── providers/               # Lenis momentum scrolling
-│   ├── sections/                # Hero · About · Skills · Projects · Sandbox · Timeline · Contact
-│   └── ui/                      # Terminal · BentoCard · MagneticButton · Marquee · Reveal
+│   ├── sections/                # Hero · SelectedWork · Projects · About · Experience · Expertise · Contact
+│   └── ui/                      # primitives (reveals) · PipelineDiagram (real system docs)
 ├── lib/
 │   └── data.ts                  # ✏️  ALL content lives here
 ├── public/
 │   ├── profile.png              # ✏️  portrait
 │   └── Resume.pdf               # ✏️  resume (re-export from Overleaf, overwrite)
-├── styles/globals.css           # design tokens · keyframes · noise layer
-└── tailwind.config.ts           # Obsidian Void theme
+├── styles/globals.css           # Editorial Light tokens · link & focus styles
+└── tailwind.config.ts           # paper / ink / accent palette
 ```
 
 ---

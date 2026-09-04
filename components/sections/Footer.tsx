@@ -1,13 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Github, Linkedin, Mail } from "lucide-react";
 import { SOCIALS } from "@/lib/data";
 
-/** Live local clock pinned to Pakistan Standard Time (UTC+5) */
-function PktClock() {
-  const [time, setTime] = useState("--:--:--");
-
+/** Live Pakistan Standard Time — real information, quietly displayed. */
+function PktTime() {
+  const [time, setTime] = useState("");
   useEffect(() => {
     const fmt = () =>
       setTime(
@@ -15,58 +13,49 @@ function PktClock() {
           timeZone: "Asia/Karachi",
           hour: "2-digit",
           minute: "2-digit",
-          second: "2-digit",
           hour12: false,
         }).format(new Date())
       );
     fmt();
-    const id = setInterval(fmt, 1000);
+    const id = setInterval(fmt, 30000);
     return () => clearInterval(id);
   }, []);
-
-  return (
-    <span className="font-mono text-xs text-slate-400">
-      PKT (UTC+5) <span className="tabular-nums text-cyanx">{time}</span>
-    </span>
-  );
+  return <span suppressHydrationWarning>{time} PKT</span>;
 }
 
 export default function Footer() {
   return (
-    <footer className="relative border-t border-white/[0.06]">
-      <div className="hairline-flow absolute inset-x-0 top-0" />
-      <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 px-6 py-10 md:flex-row">
-        <p className="font-mono text-xs text-slate-500">
-          © 2026 TALHA QURESHI — BUILT WITH{" "}
-          <span className="text-slate-300">NEXT.JS · R3F · FRAMER MOTION</span>
-        </p>
+    <footer className="border-t border-line">
+      <div className="mx-auto max-w-6xl px-6 py-14">
+        <div className="flex flex-col justify-between gap-10 md:flex-row">
+          <div>
+            <p className="font-serif-display text-xl text-ink">Talha Qureshi</p>
+            <p className="mt-1 text-[13px] text-ink3">AI/ML engineer &amp; full-stack developer</p>
+          </div>
 
-        <span className="flex items-center gap-2 font-mono text-xs text-emeraldx">
-          <span className="h-1.5 w-1.5 animate-pulse-dot rounded-full bg-emeraldx" />
-          ALL SYSTEMS OPERATIONAL
-        </span>
-
-        <div className="flex items-center gap-5">
-          <PktClock />
-          <span className="h-4 w-px bg-white/10" />
-          <div className="flex items-center gap-1">
+          <nav aria-label="Footer" className="flex flex-col gap-2.5 text-[13.5px]">
             {[
-              { href: SOCIALS.github, Icon: Github, label: "GitHub" },
-              { href: SOCIALS.linkedin, Icon: Linkedin, label: "LinkedIn" },
-              { href: SOCIALS.email, Icon: Mail, label: "Email" },
-            ].map(({ href, Icon, label }) => (
-              <a
-                key={label}
-                href={href}
-                target="_blank"
-                rel="noreferrer"
-                aria-label={label}
-                className="rounded-md p-1.5 text-slate-500 transition-colors hover:text-cyanx"
-              >
-                <Icon size={15} />
+              { href: SOCIALS.github, label: "GitHub" },
+              { href: SOCIALS.linkedin, label: "LinkedIn" },
+              { href: SOCIALS.email, label: SOCIALS.emailDisplay },
+            ].map((l) => (
+              <a key={l.label} href={l.href} target="_blank" rel="noreferrer" className="link-quiet w-fit text-ink2 hover:text-ink">
+                {l.label}
               </a>
             ))}
+          </nav>
+
+          <div className="flex flex-col gap-2.5 text-[13px] text-ink2">
+            <a href="/Resume.pdf" download className="link-quiet w-fit text-ink2 hover:text-ink">
+              Download resume ↓
+            </a>
+            <PktTime />
           </div>
+        </div>
+
+        <div className="mt-14 flex flex-col justify-between gap-2 border-t border-line pt-6 text-[12px] text-ink2 sm:flex-row">
+          <p>© 2026 Muhammad Talha Qureshi</p>
+          <p>Designed &amp; built by me — Next.js, Tailwind, Framer Motion</p>
         </div>
       </div>
     </footer>

@@ -1,17 +1,14 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Check, Loader2, Send } from "lucide-react";
-import SectionHeading from "@/components/ui/SectionHeading";
-import Reveal from "@/components/ui/Reveal";
-import MagneticButton from "@/components/ui/MagneticButton";
-import Terminal from "@/components/ui/Terminal";
-import { cn } from "@/lib/utils";
-
-const SCOPES = ["AI / ML System", "Full-Stack App", "Commerce Build", "Something Else"];
-const BUDGETS = ["< $1k", "$1k – $5k", "$5k – $15k", "Enterprise"];
+import { ArrowRight, Check, Loader2 } from "lucide-react";
+import { Reveal, SectionHead } from "@/components/ui/primitives";
+import { SCOPES, BUDGETS, SOCIALS } from "@/lib/data";
 
 type Status = "idle" | "sending" | "sent" | "error";
+
+const inputCls =
+  "w-full border-b border-line bg-transparent py-3 text-[15px] text-ink placeholder:text-ink3 outline-none transition-colors focus:border-ink";
 
 export default function Contact() {
   const [scope, setScope] = useState(SCOPES[0]);
@@ -44,158 +41,145 @@ export default function Contact() {
         (e.target as HTMLFormElement).reset();
       } else {
         setStatus("error");
-        setServerMsg(data.error ?? "Transmission failed.");
+        setServerMsg(data.error ?? "Something went wrong.");
       }
     } catch {
       setStatus("error");
-      setServerMsg("Network unreachable — try the terminal instead.");
+      setServerMsg("Network error — please email me directly instead.");
     }
   }
 
-  const inputCls =
-    "w-full rounded-xl border border-white/[0.08] bg-obsidian/70 px-4 py-3 text-sm text-white placeholder:text-slate-600 outline-none transition-colors focus:border-cyanx/50 focus:ring-1 focus:ring-cyanx/25";
-
   return (
-    <section id="contact" className="relative mx-auto max-w-6xl px-6 py-16 md:py-20">
-      <SectionHeading
-        kicker="// 05 — ESTABLISH UPLINK"
-        title="Contact"
-        sub="Two channels: standard form, or the CLI if that's how you roll. Both hit the same endpoint."
-      />
+    <section id="contact" aria-label="Contact" className="mx-auto max-w-6xl px-6 py-section">
+      <SectionHead index="05" title="Contact" />
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* ── Standard form ── */}
+      <div className="mt-14 grid gap-16 lg:grid-cols-[0.9fr_1.1fr] lg:gap-20">
+        {/* Invitation */}
         <Reveal>
-          <form
-            onSubmit={onSubmit}
-            className="flex h-full flex-col gap-5 rounded-2xl border border-white/[0.08] bg-surface/60 p-6 backdrop-blur-xl sm:p-8"
+          <h3 className="font-serif-display text-3xl leading-[1.15] text-ink sm:text-4xl">
+            Have a problem worth solving?
+          </h3>
+          <p className="mt-5 max-w-md text-pretty text-[15.5px] leading-relaxed text-ink2">
+            I&apos;m open to full-time roles and select freelance work in AI/ML
+            and full-stack development. Tell me what you&apos;re building —
+            I usually reply within a day.
+          </p>
+          <a
+            href={SOCIALS.email}
+            className="link-accent mt-8 inline-block font-serif-display text-xl text-ink sm:text-2xl"
           >
-            <div className="grid gap-5 sm:grid-cols-2">
+            {SOCIALS.emailDisplay}
+          </a>
+          <p className="mt-8 text-[13px] text-ink3">
+            Prefer social?{" "}
+            <a href={SOCIALS.linkedin} target="_blank" rel="noreferrer" className="link-quiet text-ink">
+              LinkedIn
+            </a>{" "}
+            ·{" "}
+            <a href={SOCIALS.github} target="_blank" rel="noreferrer" className="link-quiet text-ink">
+              GitHub
+            </a>
+          </p>
+        </Reveal>
+
+        {/* Form */}
+        <Reveal delay={0.1}>
+          <form onSubmit={onSubmit} className="space-y-8">
+            <div className="grid gap-8 sm:grid-cols-2">
               <div>
-                <label htmlFor="name" className="mb-2 block font-mono text-[10px] tracking-[0.2em] text-slate-500">
-                  NAME
+                <label htmlFor="name" className="label mb-1 block">
+                  Name
                 </label>
-                <input id="name" name="name" required placeholder="Jane Doe" className={inputCls} />
+                <input id="name" name="name" required placeholder="Your name" className={inputCls} autoComplete="name" />
               </div>
               <div>
-                <label htmlFor="email" className="mb-2 block font-mono text-[10px] tracking-[0.2em] text-slate-500">
-                  EMAIL
+                <label htmlFor="email" className="label mb-1 block">
+                  Email
                 </label>
                 <input
                   id="email"
                   name="email"
                   type="email"
                   required
-                  placeholder="jane@company.com"
+                  placeholder="you@company.com"
                   className={inputCls}
+                  autoComplete="email"
                 />
               </div>
             </div>
 
-            <div>
-              <p className="mb-2 font-mono text-[10px] tracking-[0.2em] text-slate-500">PROJECT SCOPE</p>
-              <div className="flex flex-wrap gap-2">
-                {SCOPES.map((s) => (
-                  <button
-                    type="button"
-                    key={s}
-                    onClick={() => setScope(s)}
-                    className={cn(
-                      "rounded-lg border px-3.5 py-2 text-xs transition-all",
-                      scope === s
-                        ? "border-cyanx/50 bg-cyanx/10 text-cyanx"
-                        : "border-white/10 text-slate-400 hover:border-white/25 hover:text-slate-200"
-                    )}
-                  >
-                    {s}
-                  </button>
-                ))}
+            <div className="grid gap-8 sm:grid-cols-2">
+              <div>
+                <label htmlFor="scope" className="label mb-1 block">
+                  Project type
+                </label>
+                <select
+                  id="scope"
+                  value={scope}
+                  onChange={(e) => setScope(e.target.value)}
+                  className={`select-quiet ${inputCls} cursor-pointer pr-8`}
+                >
+                  {SCOPES.map((s) => (
+                    <option key={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="budget" className="label mb-1 block">
+                  Budget range
+                </label>
+                <select
+                  id="budget"
+                  value={budget}
+                  onChange={(e) => setBudget(e.target.value)}
+                  className={`select-quiet ${inputCls} cursor-pointer pr-8`}
+                >
+                  {BUDGETS.map((b) => (
+                    <option key={b}>{b}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
             <div>
-              <p className="mb-2 font-mono text-[10px] tracking-[0.2em] text-slate-500">BUDGET TIER</p>
-              <div className="flex flex-wrap gap-2">
-                {BUDGETS.map((b) => (
-                  <button
-                    type="button"
-                    key={b}
-                    onClick={() => setBudget(b)}
-                    className={cn(
-                      "rounded-lg border px-3.5 py-2 font-mono text-xs transition-all",
-                      budget === b
-                        ? "border-violetx/50 bg-violetx/10 text-magenta"
-                        : "border-white/10 text-slate-400 hover:border-white/25 hover:text-slate-200"
-                    )}
-                  >
-                    {b}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex-1">
-              <label htmlFor="message" className="mb-2 block font-mono text-[10px] tracking-[0.2em] text-slate-500">
-                MESSAGE
+              <label htmlFor="message" className="label mb-1 block">
+                Message
               </label>
               <textarea
                 id="message"
                 name="message"
                 required
                 rows={4}
-                placeholder="Describe the system you want built..."
-                className={cn(inputCls, "min-h-[110px] resize-none")}
+                placeholder="What are you building, and where does it hurt?"
+                className={`${inputCls} resize-none`}
               />
             </div>
 
-            <div className="flex items-center gap-4">
-              <MagneticButton
-                className={cn(
-                  "flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold transition-all",
-                  status === "sent"
-                    ? "bg-emeraldx text-obsidian"
-                    : "bg-gradient-to-r from-cyanx to-azure text-obsidian shadow-glow-cyan hover:shadow-[0_0_50px_-8px_rgba(0,242,254,0.7)]"
-                )}
+            <div className="flex flex-wrap items-center gap-5">
+              <button
+                type="submit"
+                disabled={status === "sending"}
+                className="group inline-flex items-center gap-2 rounded-full bg-ink px-7 py-3 text-sm font-medium text-paper transition-colors duration-300 hover:bg-accentdeep disabled:opacity-60"
               >
                 {status === "sending" ? (
                   <>
-                    <Loader2 size={16} className="animate-spin" /> Transmitting...
+                    Sending <Loader2 size={15} className="animate-spin" />
                   </>
                 ) : status === "sent" ? (
                   <>
-                    <Check size={16} /> Received
+                    Sent <Check size={15} />
                   </>
                 ) : (
                   <>
-                    <Send size={15} /> Send Message
+                    Send message
+                    <ArrowRight size={15} className="transition-transform duration-300 group-hover:translate-x-0.5" />
                   </>
                 )}
-              </MagneticButton>
-
-              {status === "sent" && (
-                <p className="font-mono text-xs text-emeraldx">✓ {serverMsg}</p>
-              )}
-              {status === "error" && (
-                <p className="font-mono text-xs text-rose-400">✗ {serverMsg}</p>
-              )}
+              </button>
+              {status === "sent" && <p className="text-[13px] text-ink2">{serverMsg}</p>}
+              {status === "error" && <p className="text-[13px] text-accent">{serverMsg}</p>}
             </div>
           </form>
-        </Reveal>
-
-        {/* ── Interactive terminal ── */}
-        <Reveal delay={0.1} className="h-full">
-          <div className="flex h-full min-h-[480px] flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0A0C13]">
-            <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-2.5">
-              <span className="flex items-center gap-2 font-mono text-[10px] tracking-[0.15em] text-slate-500">
-                <span className="h-1.5 w-1.5 animate-pulse-dot rounded-full bg-emeraldx" />
-                INTERACTIVE — TRY `help`
-              </span>
-              <span className="font-mono text-[10px] text-slate-600">zsh · utf-8</span>
-            </div>
-            <div className="min-h-0 flex-1">
-              <Terminal />
-            </div>
-          </div>
         </Reveal>
       </div>
     </section>
