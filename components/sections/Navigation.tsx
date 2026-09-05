@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useMotionValueEvent, useScroll } from "framer-motion";
+import { useActiveSection } from "@/hooks/useActiveSection";
 import { cn, scrollToSection } from "@/lib/utils";
 
 const LINKS = [
@@ -14,11 +15,13 @@ const LINKS = [
 
 /**
  * Minimal editorial navigation — transparent over the hero,
- * condensing onto a paper surface with a hairline once scrolled.
+ * condensing onto a paper surface once scrolled, with a scroll-spy
+ * accent indicator on the section you're currently reading.
  */
 export default function Navigation() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const active = useActiveSection(LINKS.map((l) => l.id));
   const { scrollY } = useScroll();
 
   useMotionValueEvent(scrollY, "change", (y) => {
@@ -62,15 +65,29 @@ export default function Navigation() {
         </button>
 
         <div className="hidden items-center gap-8 md:flex">
-          {LINKS.map((l) => (
-            <button
-              key={l.id}
-              onClick={() => go(l.id)}
-              className="link-quiet text-[13px] text-ink2 transition-colors hover:text-ink"
-            >
-              {l.label}
-            </button>
-          ))}
+          {LINKS.map((l) => {
+            const isActive = active === l.id;
+            return (
+              <button
+                key={l.id}
+                onClick={() => go(l.id)}
+                aria-current={isActive ? "true" : undefined}
+                className={cn(
+                  "flex items-center gap-2 text-[13px] transition-colors duration-200",
+                  isActive ? "text-ink" : "text-ink2 hover:text-ink"
+                )}
+              >
+                <span
+                  aria-hidden
+                  className={cn(
+                    "inline-block h-[5px] w-[5px] rounded-full transition-all duration-300",
+                    isActive ? "bg-accent" : "bg-transparent"
+                  )}
+                />
+                {l.label}
+              </button>
+            );
+          })}
           <a
             href="/Resume.pdf"
             download

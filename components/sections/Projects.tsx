@@ -18,10 +18,12 @@ export default function Projects() {
               data-project={p.id}
               className="group grid grid-cols-[auto_1fr] gap-x-6 border-b border-line py-9 transition-colors duration-300 hover:bg-paper2/70 sm:gap-x-10 md:grid-cols-[64px_1fr] md:py-10"
             >
-              <span className="label pt-2">{p.index}</span>
+              <span className="label pt-2 transition-colors duration-300 group-hover:text-accent">
+                {p.index}
+              </span>
 
               <div className="max-w-2xl">
-                <h3 className="font-serif-display text-[1.45rem] leading-snug text-ink sm:text-2xl">
+                <h3 className="font-serif-display text-[1.45rem] leading-snug text-ink transition-transform duration-500 ease-out group-hover:translate-x-2 sm:text-2xl">
                   {p.title}
                 </h3>
                 <p className="mt-2 text-[13px] text-ink2">
