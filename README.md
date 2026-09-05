@@ -50,11 +50,12 @@ A single-page application engineered like a product, not a template. Every secti
 | ID | Module | What's inside |
 |----|--------|---------------|
 | `01` | **Selected Work** | Featured editorial case study — the malaria screening FYP, with a real pipeline diagram and results in measurement context |
-| `02` | **Project Index** | Five further systems as an editorial ledger — automation, deepfake detection, NLP, commerce, voice |
-| `03` | **About** | A human profile — who I am, what I work on, how I approach engineering |
-| `04` | **Experience** | Intellimind, Dev Weekends, Code Alpha, TA roles — clean typographic ledger |
-| `05` | **Expertise** | Six capability categories, restrained and credible |
-| `06` | **Contact** | Honest form → validated serverless route → my Gmail via Resend |
+| `02` | **Systems Explorer** | Interactive: pick Malaria AI / Lead Automation / Deepfake — the pipeline assembles itself, click any stage to read what was actually built |
+| `03` | **Project Index** | Five further systems as an editorial ledger — automation, deepfake detection, NLP, commerce, voice |
+| `04` | **About** | A human profile — who I am, what I work on, how I approach engineering |
+| `05` | **Experience** | Intellimind, Dev Weekends, Code Alpha, TA roles — clean typographic ledger |
+| `06` | **Expertise** | Interactive tech map — hover any technology to see which projects used it, and watch those projects light up across the page |
+| `07` | **Contact** | Honest form → validated serverless route → my Gmail via Resend |
 | `--` | **Hero** | Typography-led editorial opening with choreographed masked-line entrance |
 
 ---

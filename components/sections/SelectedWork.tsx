@@ -36,7 +36,7 @@ export default function SelectedWork() {
         </div>
       </Reveal>
 
-      <div className="mt-12 grid gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16">
+      <div data-project="malaria-screening" className="mt-12 grid gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16">
         {/* Narrative */}
         <div className="space-y-10">
           <Reveal>

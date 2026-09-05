@@ -1,13 +1,11 @@
 "use client";
 
 import { Reveal } from "@/components/ui/primitives";
-import { PipelineDiagram } from "@/components/ui/PipelineDiagram";
 import { PROJECTS } from "@/lib/data";
 
 /**
- * Selected projects — editorial index rows on hairlines, then the
- * automation system's real workflow diagram. No cards, no hover
- * theatrics: the type does the work.
+ * Selected projects — editorial index rows. Each row carries
+ * data-project so the tech map can light it up on interaction.
  */
 export default function Projects() {
   return (
@@ -16,7 +14,10 @@ export default function Projects() {
       <div className="border-t border-line">
         {PROJECTS.map((p, i) => (
           <Reveal key={p.id} delay={Math.min(i * 0.04, 0.16)}>
-            <article className="group grid grid-cols-[auto_1fr] gap-x-6 border-b border-line py-9 transition-colors duration-300 hover:bg-paper2/70 sm:gap-x-10 md:grid-cols-[64px_1fr_auto] md:py-10">
+            <article
+              data-project={p.id}
+              className="group grid grid-cols-[auto_1fr] gap-x-6 border-b border-line py-9 transition-colors duration-300 hover:bg-paper2/70 sm:gap-x-10 md:grid-cols-[64px_1fr] md:py-10"
+            >
               <span className="label pt-2">{p.index}</span>
 
               <div className="max-w-2xl">
@@ -50,24 +51,19 @@ export default function Projects() {
         ))}
       </div>
 
-      {/* ── Automation workflow diagram (real system) ── */}
-      <Reveal className="mt-20">
-        <div className="border border-line bg-paper2/60 p-6 sm:p-10">
-          <p className="label mb-8">
-            Project 02 — how the outbound pipeline actually works
-          </p>
-          <PipelineDiagram
-            steps={["Lead scraping", "Site audit", "LLM outreach", "Instantly dispatch", "Reply webhooks"]}
-            coreIndex={2}
-            caption="Self-hosted n8n orchestration — every stage is code-driven; no step is manual."
-          />
-        </div>
-      </Reveal>
-
-      <Reveal className="mt-12">
+      {/* ── Pointer to the interactive explorer ── */}
+      <Reveal className="mt-14">
         <p className="text-[14px] text-ink2">
-          Detailed write-ups, benchmarks and code walkthroughs for any project
-          here are available on request — or{" "}
+          Want to see how these systems actually work?{" "}
+          <button
+            onClick={() => {
+              document.getElementById("systems")?.scrollIntoView({ behavior: "smooth" });
+            }}
+            className="link-accent"
+          >
+            Explore the architectures
+          </button>{" "}
+          — or{" "}
           <a
             href="https://github.com/TalhaQureshi324"
             target="_blank"

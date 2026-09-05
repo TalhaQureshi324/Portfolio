@@ -14,3 +14,15 @@ export function scrollToSection(id: string) {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   }
 }
+
+/**
+ * Cross-section project highlight — used by the interactive tech
+ * map. Pass project ids to "light up" their representations
+ * anywhere on the page, or null to clear.
+ */
+export function highlightProjects(ids: string[] | null) {
+  document.querySelectorAll("[data-project]").forEach((el) => {
+    const on = ids?.includes(el.getAttribute("data-project") ?? "") ?? false;
+    el.classList.toggle("project-lit", on);
+  });
+}

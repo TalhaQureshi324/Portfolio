@@ -139,6 +139,15 @@ body {
   background-position: right 4px center;
 }
 
+/* Cross-section project highlight — tech map interaction */
+[data-project] {
+  transition: background-color 0.4s ease, box-shadow 0.4s ease;
+}
+[data-project].project-lit {
+  background-color: rgba(180, 68, 44, 0.045);
+  box-shadow: inset 3px 0 0 #b4442c;
+}
+
 /* ─────────────────────────────────────────────────────────────
    ACCESSIBILITY
    ───────────────────────────────────────────────────────────── */

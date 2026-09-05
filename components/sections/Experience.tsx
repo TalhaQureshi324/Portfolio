@@ -7,7 +7,7 @@ import { EXPERIENCE } from "@/lib/data";
 export default function Experience() {
   return (
     <section id="experience" aria-label="Experience" className="mx-auto max-w-6xl px-6 py-section">
-      <SectionHead index="03" title="Experience" aside="2023 — Present" />
+      <SectionHead index="04" title="Experience" aside="2023 — Present" />
 
       <div className="mt-14 border-t border-line">
         {EXPERIENCE.map((e, i) => (

@@ -13,7 +13,7 @@ export default function About() {
   return (
     <section id="about" aria-label="About" className="border-t border-line bg-paper2/50">
       <div className="mx-auto max-w-6xl px-6 py-section">
-        <SectionHead index="02" title="About" />
+        <SectionHead index="03" title="About" />
 
         <div className="mt-14 grid gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:gap-20">
           <Reveal>

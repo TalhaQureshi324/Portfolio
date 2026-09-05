@@ -51,7 +51,7 @@ export default function Contact() {
 
   return (
     <section id="contact" aria-label="Contact" className="mx-auto max-w-6xl px-6 py-section">
-      <SectionHead index="05" title="Contact" />
+      <SectionHead index="06" title="Contact" />
 
       <div className="mt-14 grid gap-16 lg:grid-cols-[0.9fr_1.1fr] lg:gap-20">
         {/* Invitation */}
