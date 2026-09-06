@@ -3,6 +3,7 @@ import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";
 import LenisProvider from "@/components/providers/LenisProvider";
 import Navigation from "@/components/sections/Navigation";
 import Footer from "@/components/sections/Footer";
+import Cursor from "@/components/ui/Cursor";
 import "@/styles/globals.css";
 
 const fraunces = Fraunces({
@@ -63,6 +64,7 @@ export default function RootLayout({
           <Navigation />
           {children}
           <Footer />
+          <Cursor />
           <div className="grain" aria-hidden="true" />
         </LenisProvider>
       </body>

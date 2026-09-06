@@ -26,7 +26,7 @@ export default function Expertise() {
   return (
     <section id="expertise" aria-label="Technical expertise" className="border-t border-line bg-paper2/50">
       <div className="mx-auto max-w-6xl px-6 py-section">
-        <SectionHead index="05" title="Technical expertise" />
+        <SectionHead index="06" title="Technical expertise" />
         <Reveal>
           <p className="mt-6 max-w-xl text-[14.5px] leading-relaxed text-ink2">
             Not a wall of badges — every technology below is wired to the

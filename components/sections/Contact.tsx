@@ -93,7 +93,7 @@ export default function Contact() {
   return (
     <section id="contact" aria-label="Contact" className="border-t border-line bg-paper2/50">
       <div className="mx-auto max-w-6xl px-6 py-section">
-        <SectionHead index="06" title="Contact" />
+        <SectionHead index="07" title="Contact" />
 
         {/* ── Final scene statement ── */}
         <div className="mt-16 sm:mt-20">

@@ -25,7 +25,7 @@ export default function Experience() {
 
   return (
     <section id="experience" aria-label="Experience" className="mx-auto max-w-6xl px-6 py-section">
-      <SectionHead index="04" title="Experience" aside="2023 — Present" />
+      <SectionHead index="05" title="Experience" aside="2023 — Present" />
 
       <div ref={railRef} className="relative mt-14 md:pl-10">
         {/* progress rail */}

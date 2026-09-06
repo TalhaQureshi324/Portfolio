@@ -333,6 +333,45 @@ export const SYSTEMS: SystemSpec[] = [
   },
 ];
 
+/* ── Engineering notes — how I think, grounded in real projects ── */
+export interface EngineeringNote {
+  id: string;
+  question: string;
+  answer: string;
+  projectId: string;
+}
+
+export const NOTES: EngineeringNote[] = [
+  {
+    id: "monolayer-first",
+    question: "Why monolayer detection comes before anything else",
+    projectId: "malaria-screening",
+    answer:
+      "Every stage downstream assumes the cells it sees are separated, not clumped. Detecting usable monolayer regions first means the classifier never trains on overlapping cells, and parasitemia counts stay comparable slide to slide. It's also the step that saves the most human time — microscopists spend minutes per slide just hunting for these zones — so it earns its place at the front of the pipeline.",
+  },
+  {
+    id: "audit-grounding",
+    question: "How the automated outreach stays non-generic",
+    projectId: "outbound-automation",
+    answer:
+      "The LLM never sees a blank prompt. Every email is generated from a structured audit payload — the performance numbers, UX issues and SEO gaps found on that exact site. If an audit turns up nothing worth mentioning, the lead is filtered out upstream instead of receiving a filler email. The personalization is only as honest as the audit behind it.",
+  },
+  {
+    id: "temporal-signal",
+    question: "Why the deepfake model reads frames in sequence",
+    projectId: "deepfake-detection",
+    answer:
+      "Single-frame artifacts are a cat-and-mouse game — generators patch them constantly. The more durable signal is temporal: how a face behaves across frames. The LSTM head exists for that reason, and LIME exists so its verdicts can be inspected region by region instead of trusted as a bare score.",
+  },
+  {
+    id: "latency-budget",
+    question: "What a latency budget does to a pipeline",
+    projectId: "malaria-screening",
+    answer:
+      "Real-time stage steering only works if analysis keeps pace with the motor. Holding per-frame inference under 60ms on-device shaped the system more than raw accuracy did — every stage had to justify its milliseconds, which is why the monolayer analysis and the heavy CNN have very different jobs despite living in one pipeline.",
+  },
+];
+
 /* ── Contact / social ────────────────────────────────────────── */
 export const SOCIALS = {
   github: "https://github.com/TalhaQureshi324",

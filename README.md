@@ -49,14 +49,15 @@ A single-page application engineered like a product, not a template. Every secti
 
 | ID | Module | What's inside |
 |----|--------|---------------|
+| `--` | **Hero** | Layered cinematic portrait — oversized ghost name behind a tonal-treated portrait panel, curtain entrance, pointer parallax, scroll recede |
 | `01` | **Selected Work** | Featured editorial case study — the malaria screening FYP, with a real pipeline diagram and results in measurement context |
 | `02` | **Systems Explorer** | Interactive: pick Malaria AI / Lead Automation / Deepfake — the pipeline assembles itself, click any stage to read what was actually built |
-| `03` | **Project Index** | Five further systems as an editorial ledger — automation, deepfake detection, NLP, commerce, voice |
-| `04` | **About** | A human profile — who I am, what I work on, how I approach engineering |
-| `05` | **Experience** | Intellimind, Dev Weekends, Code Alpha, TA roles — clean typographic ledger |
-| `06` | **Expertise** | Interactive tech map — hover any technology to see which projects used it, and watch those projects light up across the page |
-| `07` | **Contact** | Honest form → validated serverless route → my Gmail via Resend |
-| `--` | **Hero** | Typography-led editorial opening with choreographed masked-line entrance |
+| `03` | **Engineering Notes** | Expandable decision notes — why monolayer detection leads, how outreach stays grounded, what a latency budget costs |
+| `04` | **Project Index** | Five further systems as an editorial ledger — automation, deepfake detection, NLP, commerce, voice |
+| `05` | **About** | A human profile — who I am, what I work on, how I approach engineering |
+| `06` | **Experience** | Intellimind, Dev Weekends, Code Alpha, TA roles — typographic ledger with a scroll-filled progress rail |
+| `07` | **Expertise** | Interactive tech map — hover any technology to see which projects used it, and watch those projects light up across the page |
+| `08` | **Contact** | Final scene — masked word-by-word statement, honest form → validated serverless route → my Gmail via Resend |
 
 ---
 

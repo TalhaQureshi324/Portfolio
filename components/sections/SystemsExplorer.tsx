@@ -100,6 +100,7 @@ export default function SystemsExplorer() {
                     <button
                       onClick={() => setActiveNodeId(n.id)}
                       aria-pressed={isActive}
+                      data-cursor="Explore"
                       className="group flex flex-col items-center gap-3 px-2 text-center"
                     >
                       <span
