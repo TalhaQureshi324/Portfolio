@@ -72,19 +72,37 @@ export default function Hero() {
       onMouseLeave={onMouseLeave}
       className="relative overflow-hidden"
     >
-      {/* ── Layer 0: oversized ghost name (behind portrait) ── */}
+      {/* ── Layer 0: oversized ghost name (behind portrait) ──
+          SVG wordmark: textLength locks "TALHA QURESHI" to exactly
+          the container width, so the full name is always visible and
+          scales proportionally at every viewport size — no clipping. */}
       <motion.div
         aria-hidden
         style={reduce ? undefined : { y: ghostScrollY, x: ghostX }}
-        className="pointer-events-none absolute inset-x-0 top-[13%] z-0 hidden select-none lg:block"
+        className="pointer-events-none absolute inset-x-0 top-[11%] z-0 hidden select-none lg:block"
       >
         <motion.span
           initial={reduce ? false : { opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1.4, delay: 0.2, ease: EASE }}
-          className="block whitespace-nowrap text-center font-serif-display text-[13.5vw] leading-none tracking-[-0.02em] text-ink/[0.055]"
+          className="block text-ink/[0.055]"
         >
-          TALHA&nbsp;QURESHI
+          <svg viewBox="0 0 1200 122" className="block h-auto w-full" role="presentation" focusable="false">
+            <text
+              x="600"
+              y="96"
+              textAnchor="middle"
+              textLength="1170"
+              lengthAdjust="spacingAndGlyphs"
+              fontFamily="var(--font-fraunces), Georgia, serif"
+              fontWeight={500}
+              fontSize="104"
+              style={{ fontVariationSettings: '"opsz" 72' }}
+              fill="currentColor"
+            >
+              TALHA QURESHI
+            </text>
+          </svg>
         </motion.span>
       </motion.div>
 
