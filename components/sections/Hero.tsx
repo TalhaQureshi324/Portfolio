@@ -11,7 +11,8 @@ import {
   useTransform,
 } from "framer-motion";
 import { ArrowDown, ArrowUpRight } from "lucide-react";
-import { MaskedLine, HeroFade } from "@/components/ui/primitives";
+import { MaskedLine, HeroFade, ImageUnveil } from "@/components/ui/primitives";
+import MagneticButton from "@/components/ui/MagneticButton";
 import { scrollToSection } from "@/lib/utils";
 import portrait from "../../public/profile_new.png";
 
@@ -20,12 +21,15 @@ const EASE = [0.22, 1, 0.36, 1] as const;
 /**
  * Hero — layered cinematic portrait composition.
  *
- * Layers (back → front): ghost name (drifts slowest) → portrait panel
- * (masked curtain entrance, tonal treatment, pointer parallax) → copy
- * column (masked line entrance) → scroll cue.
+ * Vertical balance: the copy column is bottom-anchored with a
+ * viewport-relative inset (lg:pb-[10vh]) so its center of mass
+ * aligns with the portrait's optical center, not its top edge.
+ * On xl the headline extends past its column onto the portrait's
+ * gray backdrop — controlled overlap, never over the face.
  *
- * Scroll: the whole composition recedes at three different rates, so
- * leaving the hero reads as depth, not disappearance.
+ * Scroll: three layers recede at different rates, and the in-photo
+ * caption hands off from identity to the first case study, so the
+ * portrait leads the visitor into the malaria project.
  */
 export default function Hero() {
   const reduce = useReducedMotion();
@@ -63,6 +67,9 @@ export default function Hero() {
   const portraitScale = useTransform(scrollYProgress, [0, 1], [1, 1.04]);
   const ghostScrollY = useTransform(scrollYProgress, [0, 1], [0, 150]);
   const cueOpacity = useTransform(scrollYProgress, [0, 0.12], [1, 0]);
+  // caption handoff: identity fades out, first case study fades in
+  const capIdentity = useTransform(scrollYProgress, [0, 0.3], [1, 0]);
+  const capCase = useTransform(scrollYProgress, [0.35, 0.55], [0, 1]);
 
   return (
     <section
@@ -72,10 +79,7 @@ export default function Hero() {
       onMouseLeave={onMouseLeave}
       className="relative overflow-hidden"
     >
-      {/* ── Layer 0: oversized ghost name (behind portrait) ──
-          SVG wordmark: textLength locks "TALHA QURESHI" to exactly
-          the container width, so the full name is always visible and
-          scales proportionally at every viewport size — no clipping. */}
+      {/* ── Layer 0: oversized ghost wordmark (SVG — always complete) ── */}
       <motion.div
         aria-hidden
         style={reduce ? undefined : { y: ghostScrollY, x: ghostX }}
@@ -106,43 +110,49 @@ export default function Hero() {
         </motion.span>
       </motion.div>
 
-      <div className="relative z-10 mx-auto grid max-w-6xl grid-cols-1 items-end gap-14 px-6 pt-32 md:pt-40 lg:min-h-[92vh] lg:grid-cols-[1fr_0.92fr] lg:gap-10 lg:pt-36">
-        {/* ── Layer 2: copy column (recedes on scroll) ── */}
+      {/* ── Composition grid ──
+          Mobile: single column with deliberate interleaving —
+          identity → headline → PORTRAIT → description → CTAs.
+          Desktop: two columns, copy bottom-weighted against the
+          portrait's optical center. */}
+      <div className="relative z-10 mx-auto flex max-w-6xl flex-col px-6 pt-28 md:pt-32 lg:min-h-screen lg:grid lg:grid-cols-[0.95fr_1.05fr] lg:items-end lg:gap-8 lg:pt-32">
+        {/* ── Left column: copy (recedes on scroll) ──
+            [display:contents] on mobile lets its children interleave
+            with the portrait via order; block restores transforms on lg. */}
         <motion.div
           style={reduce ? undefined : { scale: copyScale, y: copyY, opacity: copyOpacity }}
-          className="relative z-20 lg:pb-24"
+          className="relative z-20 [display:contents] lg:[display:block] lg:self-end lg:pb-[10vh]"
         >
-          <MaskedLine delay={0.1}>
-            <span className="label text-accent">Muhammad Talha Qureshi</span>
-          </MaskedLine>
+          <div className="order-1">
+            <MaskedLine delay={0.05}>
+              <span className="label text-accent">Muhammad Talha Qureshi</span>
+            </MaskedLine>
+          </div>
 
-          <h1 className="mt-6 font-serif-display text-[3rem] leading-[1.02] text-ink sm:text-6xl lg:text-[4.6rem] xl:text-[5rem]">
-            <MaskedLine delay={0.22}>AI/ML engineer</MaskedLine>
-            <MaskedLine delay={0.34}>
-              <span className="text-ink">&amp; full-stack</span>
-            </MaskedLine>
-            <MaskedLine delay={0.46}>
-              <span className="text-ink">developer.</span>
-            </MaskedLine>
+          <h1 className="order-2 mt-5 font-serif-display text-[2.9rem] leading-[1.03] text-ink sm:text-6xl lg:mt-6 lg:text-[4.6rem] xl:w-[114%] xl:max-w-none xl:text-[5rem]">
+            <MaskedLine delay={0.15}>AI/ML engineer</MaskedLine>
+            <MaskedLine delay={0.27}>&amp; full-stack</MaskedLine>
+            <MaskedLine delay={0.39}>developer.</MaskedLine>
           </h1>
 
-          <HeroFade delay={0.6}>
-            <p className="mt-8 max-w-md text-pretty text-[17px] leading-relaxed text-ink2">
+          <HeroFade delay={0.5} className="order-4 mt-8 lg:mt-9">
+            <p className="max-w-md text-pretty text-[17px] leading-relaxed text-ink2">
               I build AI-powered products end to end — from a
               microscope-integrated malaria screening system to automation
               pipelines and the web applications that deliver them.
             </p>
           </HeroFade>
 
-          <HeroFade delay={0.75}>
-            <div className="mt-10 flex flex-wrap items-center gap-x-7 gap-y-4">
-              <button
+          <HeroFade delay={0.62} className="order-5 mt-10">
+            <div className="flex flex-wrap items-center gap-x-7 gap-y-4">
+              <MagneticButton
                 onClick={() => scrollToSection("work")}
+                strength={0.18}
                 className="group inline-flex items-center gap-2 rounded-full bg-ink px-6 py-3 text-sm font-medium text-paper transition-colors duration-300 hover:bg-accentdeep"
               >
                 View selected work
                 <ArrowDown size={15} className="transition-transform duration-300 group-hover:translate-y-0.5" />
-              </button>
+              </MagneticButton>
               <a href="/Resume.pdf" download className="link-quiet text-sm text-ink">
                 Resume
               </a>
@@ -152,23 +162,23 @@ export default function Hero() {
             </div>
           </HeroFade>
 
-          <HeroFade delay={0.9}>
-            <p className="mt-12 flex items-center gap-2.5 text-[13px] text-ink2">
+          <HeroFade delay={0.75} className="order-6 mt-12">
+            <p className="flex items-center gap-2.5 text-[13px] text-ink2">
               <span className="inline-block h-[5px] w-[5px] rounded-full bg-accent" aria-hidden />
               Available for new opportunities — Pakistan (UTC+5)
             </p>
           </HeroFade>
         </motion.div>
 
-        {/* ── Layer 1: the portrait panel ── */}
+        {/* ── Right: the portrait panel (larger, bottom-anchored) ── */}
         <motion.div
           style={reduce ? undefined : { y: portraitScrollY }}
-          className="relative mx-auto w-full max-w-[420px] self-end lg:max-w-none"
+          className="relative order-3 mx-auto mt-12 w-full max-w-[440px] self-end lg:order-none lg:mt-0 lg:max-w-none"
         >
-          {/* vertical edge label */}
+          {/* vertical edge label — lg only (at xl the headline overlap takes this edge) */}
           <span
             aria-hidden
-            className="absolute -left-12 top-1/4 hidden origin-top-left -rotate-90 font-mono text-[10px] tracking-[0.32em] text-ink3 xl:block"
+            className="absolute -left-12 top-1/4 hidden origin-top-left -rotate-90 font-mono text-[10px] tracking-[0.32em] text-ink3 lg:block xl:hidden"
           >
             MUHAMMAD TALHA QURESHI — PKT
           </span>
@@ -183,20 +193,20 @@ export default function Hero() {
           <motion.div
             initial={reduce ? false : { clipPath: "inset(100% 0% 0% 0%)", scale: 1.07 }}
             animate={{ clipPath: "inset(0% 0% 0% 0%)", scale: 1 }}
-            transition={{ duration: 1.35, delay: 0.4, ease: EASE }}
+            transition={{ duration: 1.3, delay: 0.3, ease: EASE }}
             className="img-quiet relative"
           >
             <motion.figure
               style={reduce ? undefined : { x: portraitX, y: portraitY, scale: portraitScale }}
-              className="relative aspect-[3/4] w-full overflow-hidden lg:aspect-auto lg:h-[74vh] lg:min-h-[560px]"
+              className="relative aspect-[3/4] w-full overflow-hidden lg:aspect-auto lg:h-[80vh] lg:min-h-[600px]"
             >
               <Image
                 src={portrait}
                 alt="Portrait of Muhammad Talha Qureshi"
                 fill
                 priority
-                sizes="(max-width: 1024px) 90vw, 46vw"
-                className="object-cover object-[50%_16%] saturate-[0.82] contrast-[1.05]"
+                sizes="(max-width: 1024px) 90vw, 48vw"
+                className="object-cover object-[50%_14%] saturate-[0.82] contrast-[1.05]"
               />
               {/* tonal treatment: vignette + bottom blend into the page */}
               <div
@@ -204,17 +214,32 @@ export default function Hero() {
                 className="absolute inset-0 bg-[radial-gradient(120%_90%_at_50%_22%,transparent_55%,rgba(26,25,21,0.20))]"
               />
               <div aria-hidden className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-ink/30 to-transparent" />
-              {/* in-photo caption */}
-              <p className="absolute bottom-4 left-4 font-mono text-[10px] tracking-[0.18em] text-paper/85">
-                FINAL-YEAR CS · AI CONCENTRATION
-              </p>
+
+              {/* scroll handoff: identity caption → first case study */}
+              <div className="absolute bottom-4 left-4 right-4">
+                <motion.p
+                  aria-hidden={reduce ? undefined : true}
+                  style={reduce ? undefined : { opacity: capIdentity }}
+                  className="font-mono text-[10px] tracking-[0.18em] text-paper/85"
+                >
+                  FINAL-YEAR CS · AI CONCENTRATION
+                </motion.p>
+                {!reduce && (
+                  <motion.p
+                    style={{ opacity: capCase }}
+                    className="absolute bottom-0 left-0 right-0 font-mono text-[10px] tracking-[0.18em] text-paper"
+                  >
+                    NEXT — CASE FILE 01 · MALARIA SCREENING ↓
+                  </motion.p>
+                )}
+              </div>
             </motion.figure>
           </motion.div>
         </motion.div>
       </div>
 
       {/* ── Scroll cue ── */}
-      <HeroFade delay={1.4}>
+      <HeroFade delay={1.1}>
         <motion.div
           style={reduce ? undefined : { opacity: cueOpacity }}
           className="pointer-events-none absolute bottom-8 left-6 hidden items-center gap-3 md:flex lg:left-[max(1.5rem,calc((100vw-72rem)/2+1.5rem))]"
