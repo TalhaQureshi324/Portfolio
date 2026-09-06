@@ -115,7 +115,7 @@ export default function Hero() {
           identity → headline → PORTRAIT → description → CTAs.
           Desktop: two columns, copy bottom-weighted against the
           portrait's optical center. */}
-      <div className="relative z-10 mx-auto flex max-w-6xl flex-col px-6 pt-28 md:pt-32 lg:min-h-screen lg:grid lg:grid-cols-[0.95fr_1.05fr] lg:items-end lg:gap-8 lg:pt-32">
+      <div className="relative z-10 mx-auto flex max-w-6xl flex-col px-6 pt-32 md:pt-36 lg:min-h-screen lg:grid lg:grid-cols-[0.95fr_1.05fr] lg:items-end lg:gap-8 lg:pt-44">
         {/* ── Left column: copy (recedes on scroll) ──
             [display:contents] on mobile lets its children interleave
             with the portrait via order; block restores transforms on lg. */}
@@ -129,7 +129,7 @@ export default function Hero() {
             </MaskedLine>
           </div>
 
-          <h1 className="order-2 mt-5 font-serif-display text-[2.9rem] leading-[1.03] text-ink sm:text-6xl lg:mt-6 lg:text-[4.6rem] xl:w-[114%] xl:max-w-none xl:text-[5rem]">
+          <h1 className="order-2 mt-5 font-serif-display text-[2.9rem] leading-[1.03] text-ink sm:text-6xl lg:mt-6 lg:text-[4.4rem]">
             <MaskedLine delay={0.15}>AI/ML engineer</MaskedLine>
             <MaskedLine delay={0.27}>&amp; full-stack</MaskedLine>
             <MaskedLine delay={0.39}>developer.</MaskedLine>
@@ -198,7 +198,7 @@ export default function Hero() {
           >
             <motion.figure
               style={reduce ? undefined : { x: portraitX, y: portraitY, scale: portraitScale }}
-              className="relative aspect-[3/4] w-full overflow-hidden lg:aspect-auto lg:h-[80vh] lg:min-h-[600px]"
+              className="relative aspect-[3/4] w-full overflow-hidden lg:aspect-auto lg:h-[70vh] lg:min-h-[540px]"
             >
               <Image
                 src={portrait}
