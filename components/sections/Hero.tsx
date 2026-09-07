@@ -174,7 +174,7 @@ export default function Hero() {
         {/* ── Right: the portrait panel (larger, bottom-anchored) ── */}
         <motion.div
           style={reduce ? undefined : { y: portraitScrollY }}
-          className="relative order-3 mx-auto mt-12 w-full max-w-[440px] self-end lg:order-none lg:mt-0 lg:max-w-none"
+          className="relative order-3 mx-auto mt-12 w-full max-w-[440px] self-end lg:order-none lg:mb-[50px] lg:mt-0 lg:max-w-none"
         >
           {/* vertical identity label — rotated, on the portrait's left edge */}
           <span
