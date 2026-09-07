@@ -9,6 +9,7 @@ import {
   useScroll,
   useSpring,
   useTransform,
+  type Variants,
 } from "framer-motion";
 import { ArrowDown, ArrowUpRight } from "lucide-react";
 import { MaskedLine, HeroFade, ImageUnveil } from "@/components/ui/primitives";
@@ -17,6 +18,48 @@ import { scrollToSection } from "@/lib/utils";
 import portrait from "../../public/profile_new.png";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
+
+/* ── Vertical signature — "TALHA QURESHI" letter spine ── */
+const SIG_A = ["T", "A", "L", "H", "A"];
+const SIG_B = ["Q", "U", "R", "E", "S", "H", "I"];
+
+const sigParent: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.045, delayChildren: 0.55 } },
+};
+const sigLetter: Variants = {
+  hidden: { opacity: 0, y: 12 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: EASE } },
+};
+
+/** One word of the signature — letters stacked (vertical) or in a row (mobile) */
+function SignatureWord({
+  letters,
+  vertical,
+}: {
+  letters: string[];
+  vertical: boolean;
+}) {
+  return (
+    <div
+      className={
+        vertical
+          ? "flex flex-col items-center gap-[3px]"
+          : "flex items-center gap-[7px]"
+      }
+    >
+      {letters.map((l, i) => (
+        <motion.span
+          key={`${l}-${i}`}
+          variants={sigLetter}
+          className="sig-letter"
+        >
+          {l}
+        </motion.span>
+      ))}
+    </div>
+  );
+}
 
 /**
  * Hero — layered cinematic portrait composition.
@@ -70,6 +113,8 @@ export default function Hero() {
   // caption handoff: identity fades out, first case study fades in
   const capIdentity = useTransform(scrollYProgress, [0, 0.3], [1, 0]);
   const capCase = useTransform(scrollYProgress, [0.35, 0.55], [0, 1]);
+  // signature recedes quietly with the composition
+  const sigOpacity = useTransform(scrollYProgress, [0, 0.7], [1, 0.3]);
 
   return (
     <section
@@ -115,7 +160,7 @@ export default function Hero() {
           identity → headline → PORTRAIT → description → CTAs.
           Desktop: two columns, copy bottom-weighted against the
           portrait's optical center. */}
-      <div className="relative z-10 mx-auto flex max-w-6xl flex-col px-6 pt-32 md:pt-36 lg:min-h-screen lg:grid lg:grid-cols-[0.95fr_1.05fr] lg:items-end lg:gap-8 lg:pt-44">
+      <div className="relative z-10 mx-auto flex max-w-6xl flex-col px-6 pt-32 md:pt-36 lg:min-h-screen lg:grid lg:grid-cols-[1.02fr_0.98fr] lg:items-end lg:gap-10 lg:pt-44">
         {/* ── Left column: copy (recedes on scroll) ──
             [display:contents] on mobile lets its children interleave
             with the portrait via order; block restores transforms on lg. */}
@@ -129,7 +174,7 @@ export default function Hero() {
             </MaskedLine>
           </div>
 
-          <h1 className="order-2 mt-5 font-serif-display text-[2.9rem] leading-[1.03] text-ink sm:text-6xl lg:mt-6 lg:text-[4.4rem]">
+          <h1 className="order-2 mt-5 font-serif-display text-[2.9rem] leading-[1.03] text-ink sm:text-6xl lg:mt-6 lg:text-[3.9rem] xl:text-[4.4rem]">
             <MaskedLine delay={0.15}>AI/ML engineer</MaskedLine>
             <MaskedLine delay={0.27}>&amp; full-stack</MaskedLine>
             <MaskedLine delay={0.39}>developer.</MaskedLine>
@@ -175,19 +220,41 @@ export default function Hero() {
           style={reduce ? undefined : { y: portraitScrollY }}
           className="relative order-3 mx-auto mt-12 w-full max-w-[440px] self-end lg:order-none lg:mt-0 lg:max-w-none"
         >
-          {/* vertical edge label — lg only (at xl the headline overlap takes this edge) */}
-          <span
+          {/* ── Vertical signature — typographic spine along the portrait ──
+              Letters reveal sequentially (staggered) after the portrait
+              curtain begins; each letter lifts + turns accent on hover.
+              Recedes with the composition on scroll. */}
+          <motion.div
             aria-hidden
-            className="absolute -left-12 top-1/4 hidden origin-top-left -rotate-90 font-mono text-[10px] tracking-[0.32em] text-ink3 lg:block xl:hidden"
+            variants={sigParent}
+            initial={reduce ? false : "hidden"}
+            animate="show"
+            style={reduce ? undefined : { opacity: sigOpacity }}
+            className="absolute -left-9 top-[3%] hidden lg:flex flex-col items-center"
           >
-            MUHAMMAD TALHA QURESHI — PKT
-          </span>
+            <SignatureWord letters={SIG_A} vertical />
+            <span className="my-3 h-4 w-px bg-line" />
+            <SignatureWord letters={SIG_B} vertical />
+          </motion.div>
 
           {/* offset accent frame */}
           <div
             aria-hidden
             className="absolute -right-4 -top-4 hidden h-full w-full border border-accent/70 sm:block lg:-right-5 lg:-top-5"
           />
+
+          {/* mobile signature — abbreviated horizontal treatment above the portrait */}
+          <motion.div
+            variants={sigParent}
+            initial={reduce ? false : "hidden"}
+            animate="show"
+            className="mb-5 flex items-center gap-3 lg:hidden"
+            aria-hidden
+          >
+            <SignatureWord letters={SIG_A} vertical={false} />
+            <span className="h-px w-6 bg-line" />
+            <SignatureWord letters={SIG_B} vertical={false} />
+          </motion.div>
 
           {/* curtain entrance + pointer parallax */}
           <motion.div
