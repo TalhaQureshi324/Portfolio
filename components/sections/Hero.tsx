@@ -176,6 +176,14 @@ export default function Hero() {
           style={reduce ? undefined : { y: portraitScrollY }}
           className="relative order-3 mx-auto mt-12 w-full max-w-[440px] self-end lg:order-none lg:mt-0 lg:max-w-none"
         >
+          {/* vertical identity label — rotated, on the portrait's left edge */}
+          <span
+            aria-hidden
+            className="absolute -left-12 top-1/4 hidden origin-top-left -rotate-90 font-mono text-[10px] tracking-[0.32em] text-ink3 lg:block"
+          >
+            MUHAMMAD TALHA QURESHI — PKT
+          </span>
+
           {/* offset accent frame */}
           <div
             aria-hidden
