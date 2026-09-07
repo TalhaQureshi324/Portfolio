@@ -121,7 +121,7 @@ export default function Hero() {
             with the portrait via order; block restores transforms on lg. */}
         <motion.div
           style={reduce ? undefined : { scale: copyScale, y: copyY, opacity: copyOpacity }}
-          className="relative z-20 [display:contents] lg:[display:block] lg:self-end lg:pb-[10vh]"
+          className="relative z-20 [display:contents] lg:[display:block] lg:self-end lg:pb-[7vh]"
         >
           <HeroFade delay={0.05} className="order-1">
             <p className="font-mono text-[11px] uppercase leading-none tracking-[0.26em] text-ink2">
@@ -199,7 +199,7 @@ export default function Hero() {
           >
             <motion.figure
               style={reduce ? undefined : { x: portraitX, y: portraitY, scale: portraitScale }}
-              className="relative aspect-[3/4] w-full overflow-hidden lg:aspect-auto lg:h-[70vh] lg:min-h-[540px]"
+              className="relative aspect-[3/4] w-full overflow-hidden lg:aspect-auto lg:h-[74vh] lg:min-h-[560px] [@media(max-height:820px)]:lg:h-[82vh]"
             >
               <Image
                 src={portrait}
