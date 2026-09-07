@@ -131,32 +131,6 @@ body {
   transform: scale(1.025);
 }
 
-/* Vertical signature letter — interactive spine */
-.sig-letter {
-  display: inline-block;
-  font-family: var(--font-fraunces), Georgia, serif;
-  font-variation-settings: "opsz" 40;
-  font-size: 17px;
-  line-height: 1;
-  color: rgba(26, 25, 21, 0.78);
-  cursor: default;
-  transition: color 0.3s ease, transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.sig-letter:hover {
-  color: var(--accent);
-  transform: translateY(-2px);
-}
-@media (min-width: 1280px) {
-  .sig-letter {
-    font-size: 19px;
-  }
-}
-@media (max-width: 1023px) {
-  .sig-letter {
-    font-size: 15px;
-  }
-}
-
 /* Native selects — quiet editorial styling */
 .select-quiet {
   appearance: none;
