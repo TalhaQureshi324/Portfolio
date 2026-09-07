@@ -124,18 +124,19 @@ export default function Hero() {
           className="relative z-20 [display:contents] lg:[display:block] lg:self-end lg:pb-[10vh]"
         >
           <HeroFade delay={0.05} className="order-1">
-            <p className="font-mono text-[10px] uppercase leading-none tracking-[0.28em] text-ink2">
+            <p className="font-mono text-[11px] uppercase leading-none tracking-[0.26em] text-ink2">
               Muhammad Talha Qureshi
             </p>
           </HeroFade>
 
-          <h1 className="order-2 mt-6 font-serif-display text-[2.9rem] leading-[1.03] text-ink sm:text-6xl lg:mt-7 lg:text-[3.9rem] xl:text-[4.4rem]">
-            <MaskedLine delay={0.15}>AI/ML engineer</MaskedLine>
-            <MaskedLine delay={0.27}>&amp; full-stack</MaskedLine>
-            <MaskedLine delay={0.39}>developer.</MaskedLine>
+          <h1 className="order-2 mt-7 font-serif-display text-[2.9rem] leading-[1.05] text-ink sm:text-6xl lg:mt-8 lg:text-[4.4rem] xl:text-[4.65rem]">
+            <MaskedLine delay={0.18}>AI/ML</MaskedLine>
+            <MaskedLine delay={0.3}>engineer</MaskedLine>
+            <MaskedLine delay={0.42}>&amp; full-stack</MaskedLine>
+            <MaskedLine delay={0.54}>developer.</MaskedLine>
           </h1>
 
-          <HeroFade delay={0.5} className="order-4 mt-8 lg:mt-9">
+          <HeroFade delay={0.62} className="order-4 mt-9 lg:mt-10">
             <p className="max-w-md text-pretty text-[17px] leading-relaxed text-ink2">
               I build AI-powered products end to end — from a
               microscope-integrated malaria screening system to automation
@@ -143,7 +144,7 @@ export default function Hero() {
             </p>
           </HeroFade>
 
-          <HeroFade delay={0.62} className="order-5 mt-10">
+          <HeroFade delay={0.72} className="order-5 mt-10">
             <div className="flex flex-wrap items-center gap-x-7 gap-y-4">
               <MagneticButton
                 onClick={() => scrollToSection("work")}
@@ -162,7 +163,7 @@ export default function Hero() {
             </div>
           </HeroFade>
 
-          <HeroFade delay={0.75} className="order-6 mt-12">
+          <HeroFade delay={0.85} className="order-6 mt-12">
             <p className="flex items-center gap-2.5 text-[13px] text-ink2">
               <span className="inline-block h-[5px] w-[5px] rounded-full bg-accent" aria-hidden />
               Available for new opportunities — Pakistan (UTC+5)
