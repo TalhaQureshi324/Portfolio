@@ -15,6 +15,7 @@ export default function Projects() {
         {PROJECTS.map((p, i) => (
           <Reveal key={p.id} delay={Math.min(i * 0.04, 0.16)}>
             <article
+              id={p.id}
               data-project={p.id}
               className="group grid grid-cols-[auto_1fr] gap-x-6 border-b border-line py-9 transition-colors duration-300 hover:bg-paper2/70 sm:gap-x-10 md:grid-cols-[64px_1fr] md:py-10"
             >

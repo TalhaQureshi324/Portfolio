@@ -4,6 +4,7 @@ import LenisProvider from "@/components/providers/LenisProvider";
 import Navigation from "@/components/sections/Navigation";
 import Footer from "@/components/sections/Footer";
 import Cursor from "@/components/ui/Cursor";
+import Chat from "@/components/chat/Chat";
 import "@/styles/globals.css";
 
 const fraunces = Fraunces({
@@ -65,6 +66,7 @@ export default function RootLayout({
           {children}
           <Footer />
           <Cursor />
+          <Chat />
           <div className="grain" aria-hidden="true" />
         </LenisProvider>
       </body>
