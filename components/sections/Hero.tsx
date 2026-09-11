@@ -69,7 +69,6 @@ export default function Hero() {
   const cueOpacity = useTransform(scrollYProgress, [0, 0.12], [1, 0]);
   // caption handoff: identity fades out, first case study fades in
   const capIdentity = useTransform(scrollYProgress, [0, 0.3], [1, 0]);
-  const capCase = useTransform(scrollYProgress, [0.35, 0.55], [0, 1]);
 
   return (
     <section
@@ -216,7 +215,7 @@ export default function Hero() {
               />
               <div aria-hidden className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-ink/30 to-transparent" />
 
-              {/* scroll handoff: identity caption → first case study */}
+              {/* identity caption — kept clean, no case-file handoff here */}
               <div className="absolute bottom-4 left-4 right-4">
                 <motion.p
                   aria-hidden={reduce ? undefined : true}
@@ -225,14 +224,6 @@ export default function Hero() {
                 >
                   FINAL-YEAR CS · AI CONCENTRATION
                 </motion.p>
-                {!reduce && (
-                  <motion.p
-                    style={{ opacity: capCase }}
-                    className="absolute bottom-0 left-0 right-0 font-mono text-[10px] tracking-[0.18em] text-paper"
-                  >
-                    NEXT — CASE FILE 01 · MALARIA SCREENING ↓
-                  </motion.p>
-                )}
               </div>
             </motion.figure>
           </motion.div>

@@ -262,13 +262,31 @@ function curated(q: string): QuickResult | null {
       followUps: ["How is the latency budget managed?", "What does WebSockets handle?", "What was the round-trip latency?"],
     };
 
-  /* strongest projects */
-  if (/(strongest|best|top|impressiv|notable|highlights?|showcase)/.test(q) && /(project|work|build)/.test(q))
+  /* strongest areas / projects */
+  if (/(strongest|best|top|impressiv|notable|highlights?|showcase)/.test(q) && /(project|work|build|areas?|domains?|skills?|strengths?)/.test(q))
     return {
       text: "Three stand out on documented evidence: the malaria screening system — 96.8% detection sensitivity on a held-out test set with <60ms per-frame on-device inference; the deepfake detection engine — 98.4% accuracy on a held-out FaceForensics++ benchmark with LIME explainability; and the autonomous outbound automation — a 4.8× reply rate vs. template outreach in a campaign comparison.",
       actions: [A.malaria, A.deepfake, A.outbound],
       followUps: ["Tell me about the malaria project.", "Why the hybrid Xception-LSTM?", "How does the outreach stay non-generic?"],
     };
+
+  /* technology evidence — reuse the structured tech index (BEFORE the
+     generic experience gate so "Redis experience?" gets tech evidence) */
+  const mentions = findTechMentions(q);
+  if (mentions.length > 0 && q.split(/\s+/).length <= 14) {
+    const lines = mentions.map(
+      (t) =>
+        `${t.name} [${t.strength === "DIRECT_PROJECT" ? "direct project use" : "toolkit listing"}]: ${
+          t.evidence.map((e) => `${e.title} — ${e.how}`).join("; ") ||
+          "listed in his toolkit; no documented project use on this page"
+        }`
+    );
+    return {
+      text: lines.join("\n") + (mentions.some((m) => m.evidence.length) ? "\nAll from documented projects on this page." : ""),
+      actions: [A.expertise],
+      followUps: ["What are his strongest AI projects?", "What does he specialize in?", "How can I contact him?"],
+    };
+  }
 
   /* experience */
   if (/(experience|work history|career|intellimind|current(ly)? work|jobs?|teaching|mentor|\bta\b|background)/.test(q)) {
@@ -291,22 +309,7 @@ function curated(q: string): QuickResult | null {
     };
   }
 
-  /* technology evidence — reuse the structured tech index */
-  const mentions = findTechMentions(q);
-  if (mentions.length > 0 && q.split(/\s+/).length <= 14) {
-    const lines = mentions.map(
-      (t) =>
-        `${t.name} [${t.strength === "DIRECT_PROJECT" ? "direct project use" : "toolkit listing"}]: ${
-          t.evidence.map((e) => `${e.title} — ${e.how}`).join("; ") ||
-          "listed in his toolkit; no documented project use on this page"
-        }`
-    );
-    return {
-      text: lines.join("\n") + (mentions.some((m) => m.evidence.length) ? "\nAll from documented projects on this page." : ""),
-      actions: [A.expertise],
-      followUps: ["What are his strongest AI projects?", "What does he specialize in?", "How can I contact him?"],
-    };
-  }
+  /* technology evidence is handled above; drop this duplicate slot */
 
   /* identity / specialization */
   if (/(who is|who's|about him|about talha|introduce|his story|education|student|university|based)/.test(q))
@@ -322,8 +325,12 @@ function curated(q: string): QuickResult | null {
       followUps: ["What are his strongest AI projects?", "Where has he used PyTorch?", "Tell me about the malaria project."],
     };
 
+  /* any other hiring question goes to the LLM (with local fit-analysis
+     as its fallback) — never to the contact answer */
+  if (hiringWord) return null;
+
   /* contact */
-  if (/(contact|reach|email|hire|available|freelance|get in touch|full-?time)/.test(q))
+  if (/(contact|reach|email|available|freelance|get in touch|full-?time)/.test(q))
     return {
       text: "Talha is open to full-time roles and selective freelance, and usually replies within a day. Email: iamtalhaqureshi849@gmail.com. You can also use the contact form on this page, or find him on LinkedIn (muhammad-talha-27b709331) and GitHub (TalhaQureshi324).",
       actions: [A.contact, A.email, A.linkedin],

@@ -39,6 +39,20 @@ const GREETING: Msg = {
     "I'm Talha's portfolio assistant. Ask me about his projects, technical background, engineering decisions or experience — and I'll point you to the right place on this page.",
 };
 
+/* Local preprocessing while the user TYPES — pure regex, zero network.
+   Result is sent along on submit so the server skips re-deriving it. */
+function detectHints(q: string): { intent?: string; techs?: string[] } {
+  const techList = ["pytorch", "opencv", "playwright", "redis", "fastapi", "next.js", "n8n", "lime", "bert", "librosa", "websockets", "shopify", "streamlit", "llm", "kubernetes", "aws", "docker", "graphql", "postgresql"];
+  const techs = techList.filter((t) => new RegExp(`\\b${t.replace(".", "\\.")}\\b`, "i").test(q));
+  let intent: string | undefined;
+  if (/interview/i.test(q)) intent = "INTERVIEW_QUESTIONS";
+  else if (/\b(hire|hiring|recruiter|candidate|shortlist)\b|fit\b/i.test(q)) intent = "RECRUITER_FIT";
+  else if (/we need|looking for|requirements/i.test(q)) intent = "JOB_REQUIREMENT_ANALYSIS";
+  else if (/\b(contact|reach|email)\b/i.test(q)) intent = "CONTACT";
+  else if (/\b(experience|career|intellimind)\b/i.test(q)) intent = "EXPERIENCE_QUERY";
+  return { intent, techs: techs.length ? techs : undefined };
+}
+
 export default function AskTalha() {
   const reduce = useReducedMotion();
   const [open, setOpen] = useState(false);
@@ -49,6 +63,16 @@ export default function AskTalha() {
   const inputRef = useRef<HTMLInputElement>(null);
   const launcherRef = useRef<HTMLButtonElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const hintsRef = useRef<{ intent?: string; techs?: string[] }>({});
+
+  // local intent/evidence detection runs WHILE TYPING (debounced 250ms,
+  // no network calls) so submission finds its context already prepared
+  useEffect(() => {
+    const t = setTimeout(() => {
+      hintsRef.current = input.trim() ? detectHints(input) : {};
+    }, 250);
+    return () => clearTimeout(t);
+  }, [input]);
 
   // focus management
   useEffect(() => {
@@ -130,7 +154,7 @@ export default function AskTalha() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: q, history }),
+        body: JSON.stringify({ question: q, history, hints: hintsRef.current }),
       });
 
       if (!res.ok || !res.body) {
