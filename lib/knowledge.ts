@@ -48,6 +48,9 @@ const A = {
   linkedin: { label: "LinkedIn", type: "linkedin" as const },
 };
 
+/** Shared evidence actions — reused by the fit-analysis engine */
+export const EVIDENCE_ACTIONS = A;
+
 /* ── identity & career ───────────────────────────────────────── */
 export const IDENTITY = {
   name: "Muhammad Talha Qureshi",
@@ -335,7 +338,11 @@ for (const key of Object.keys(TECH_EVIDENCE)) {
   ENTRIES.push({
     id: `tech-${key}`,
     topic: key,
-    keywords: TECH_ENTRY_KEYWORDS[key] ?? [key],
+    keywords: [
+      ...(TECH_ENTRY_KEYWORDS[key] ?? [key]),
+      `${TECH_ENTRY_TITLES[key].toLowerCase()} experience`,
+      `${key} experience`,
+    ],
     message: `${TECH_ENTRY_TITLES[key]} — where it was actually used: ${TECH_EVIDENCE[key]}`,
     actions: [A.expertise, A.cv],
     followUps: ["What are his AI projects?", "What does Talha specialize in?", "How can I contact him?"],
@@ -372,8 +379,8 @@ export const ALL_ENTRIES: KnowledgeEntry[] = [...ENTRIES, ...PROJECT_ENTRIES];
 /** Technologies mentioned in the toolkit but without project evidence on this site */
 export const TOOLKIT_ONLY = [
   "TensorFlow", "Django", "Flask", ".NET", "PostgreSQL", "Docker",
-  "Kubernetes", "Linux", "CI/CD", "Flutter", "REST & gRPC", "GraphQL",
-  "MongoDB", "Puppeteer", "GraphQL", "AWS", "GCP", "Azure",
+  "Kubernetes", "Linux", "CI/CD", "Flutter", "REST & gRPC", "MongoDB",
+  "Puppeteer", "AWS", "GCP", "Azure",
 ];
 
 /** Vocabulary for off-topic detection */

@@ -223,7 +223,7 @@ export default function AskTalha() {
                     <div className="border-l-2 border-accent/60 pl-3.5">
                       <p className="label mb-1.5">Ask Talha</p>
                       <p
-                        className={`text-pretty text-[13.5px] leading-relaxed ${
+                        className={`whitespace-pre-line text-pretty text-[13.5px] leading-relaxed ${
                           m.error ? "text-accent" : "text-ink2"
                         }`}
                       >
