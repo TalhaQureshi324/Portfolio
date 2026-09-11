@@ -187,8 +187,23 @@ function noteAnswer(q: string): QuickResult | null {
 
 /* ── curated answers (all facts from data.ts) ────────────────── */
 function curated(q: string): QuickResult | null {
-  /* hiring / fit questions always get full LLM reasoning — never a shortcut */
-  if (/\b(hire|hiring|recruiter|candidate|shortlist|suitable|qualified|fit)\b/.test(q)) return null;
+  /* Specific JD-fit questions ("we need X and Y, is he a fit?") get full
+     LLM reasoning. Generic why-hire / what's-unique questions get the
+     instant pitch below. */
+  const hiringWord = /\b(hire|hiring|recruiter|candidate|shortlist|suitable|qualified|fit)\b/.test(q);
+  const jdSpecific =
+    hiringWord &&
+    (/(we need|we'?re hiring|we are hiring|looking for|requirement|job description|role (for|in|at)|position|opening|experience (with|in|using))/.test(q) ||
+      /\b(redis|playwright|pytorch|react|next\.?js|node|python|fastapi|aws|kubernetes|docker|tensorflow)\b/.test(q));
+  if (jdSpecific) return null;
+
+  /* unique value / why hire */
+  if (/\b(unique|differen(t|ce)|stand out|stands out|special\b|why (should|would|hire)|what (he )?(bring|brings|offer)|value proposition|convince|strengths?)\b/.test(q))
+    return {
+      text: "What makes Talha stand out, on documented evidence: he builds AI that reaches the physical world — his malaria system doesn't just classify images, it steers a real microscope stage over serial while holding per-frame inference under 60ms on-device. His automation is audit-grounded, not template spam — a 4.8× reply rate vs. template outreach in a campaign comparison. His deepfake forensics is inspectable — LIME heatmaps behind every verdict, 98.4% accuracy on a held-out FaceForensics++ benchmark. And he ships end-to-end: serial hardware → PyTorch → FastAPI and Next.js interfaces — while teaching 120+ students as a TA and mentoring 50+ developers. He's currently an AI Automation & Full-Stack Developer at Intellimind.",
+      actions: [A.malaria, A.experience, A.contact],
+      followUps: ["What are his strongest AI projects?", "What is his experience?", "How can I contact him?"],
+    };
 
   /* malaria — with sub-intents */
   if (/\bmalaria|parasitemia|monolayer|plasmodium|blood slide\b/.test(q)) {
@@ -346,4 +361,54 @@ export function quickAnswer(question: string, recentContext = ""): QuickResult |
       : q;
 
   return navigation(q) ?? noteAnswer(q) ?? curated(effective);
+}
+
+/**
+ * RESILIENT FALLBACK — broad keyword matching over the same curated,
+ * evidence-grounded answers. Used only when the LLM path fails, so a
+ * provider outage never leaves a known question type unanswered.
+ * Returns null only for genuinely unknown questions.
+ */
+export function fallbackAnswer(question: string, recentContext = ""): QuickResult | null {
+  const strict = quickAnswer(question, recentContext);
+  if (strict) return strict;
+  const q = question.toLowerCase();
+  /* hiring questions get the hire pitch — never the contact answer */
+  if (/\b(hire|hiring|recruiter|candidate|shortlist|fit|suitable|qualified)\b/.test(q))
+    return {
+      text: "On documented evidence, Talha is a strong hire for AI engineering roles: he builds AI that reaches the physical world — his malaria system steers a real microscope stage over serial while holding per-frame inference under 60ms on-device. His automation is audit-grounded, not template spam (4.8× reply rate vs. template outreach, campaign comparison). His deepfake forensics is inspectable (LIME heatmaps, 98.4% accuracy on a held-out FaceForensics++ benchmark). And he ships end-to-end: serial hardware → PyTorch → FastAPI and Next.js interfaces.",
+      actions: [A.malaria, A.experience, A.contact],
+      followUps: ["What are his strongest AI projects?", "What is his experience?", "How can I contact him?"],
+    };
+  if (/\b(project|built|build|portfolio|case study|app|system|pipeline)\b/.test(q))
+    return {
+      text: "His documented projects: the AI-guided malaria screening system (96.8% detection sensitivity, held-out test set; <60ms per-frame on-device), the deepfake detection engine (98.4% accuracy, held-out FaceForensics++ benchmark, LIME explainability), the autonomous outbound & site-audit automation (4.8× reply rate vs. template outreach, campaign comparison), the cross-source news aggregator (34 live sources, 91% cluster purity), the B2B commerce platform (1.2s LCP p75, field data after rebuild) and the real-time voice pipeline (<120ms round-trip, local benchmark).",
+      actions: [A.work, A.malaria],
+      followUps: ["Tell me about the malaria project.", "What are his strongest AI projects?", "What does he specialize in?"],
+    };
+  if (/\b(experience|work|industry|professional|production|company|job|employ)\b/.test(q))
+    return {
+      text: "He's currently an AI Automation & Full-Stack Developer at Intellimind (remote, Feb 2026–present) — AI automation, FastAPI pipelines, NLP assistants. Before that: ML/NLP/full-stack project work (2024–present), Code Alpha (Mar–Jun 2025), two Teaching Assistant roles (120+ and 80+ students), and ML workshops for 50+ developers at Dev Weekends.",
+      actions: [A.experience, A.contact],
+      followUps: ["What does he build at Intellimind?", "What are his strongest projects?", "How can I contact him?"],
+    };
+  if (/\b(skill|tech|stack|tools?|language|framework)\b/.test(q))
+    return {
+      text: "Core stack: Python, PyTorch, OpenCV, FastAPI, Next.js, plus n8n, Playwright, Redis, WebSockets, LIME, BERT/Transformers, Shopify and Streamlit — each tied to a documented project on this page (the tech map shows exactly where).",
+      actions: [A.expertise, A.work],
+      followUps: ["Where has he used PyTorch?", "What are his strongest AI projects?", "What does he specialize in?"],
+    };
+  if (/\b(who|about|introduce|background|person)\b/.test(q))
+    return {
+      text: "Muhammad Talha Qureshi (he prefers \"Talha\") is an AI/ML Engineer & Full-Stack Developer based in Pakistan (UTC+5), final-year BS Computer Science with an AI concentration, currently an AI Automation & Full-Stack Developer at Intellimind (remote, Feb 2026–present) and mentor to 50+ developers at Dev Weekends.",
+      actions: [A.experience, A.contact],
+      followUps: ["What does Talha specialize in?", "What are his strongest AI projects?", "How can I contact him?"],
+    };
+  if (/\b(contact|email|reach|touch)\b/.test(q))
+    return {
+      text: "You can reach Talha at iamtalhaqureshi849@gmail.com — he's open to full-time roles and selective freelance, and usually replies within a day.",
+      actions: [A.contact, A.email],
+      followUps: ["What does he specialize in?", "What is his experience?", "What are his strongest projects?"],
+    };
+  return null;
 }

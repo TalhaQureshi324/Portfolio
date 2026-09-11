@@ -15,6 +15,10 @@ const MAX_PER_WINDOW = 30;
 const MAX_QUESTION = 600;
 const MAX_HISTORY = 12;
 
+// LLM path can legitimately take 20s+ (provider fallback chain);
+// pin the function budget so the platform never cuts the stream early
+export const maxDuration = 60;
+
 const hits = new Map<string, { count: number; reset: number }>();
 
 function rateLimited(ip: string): boolean {

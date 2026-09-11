@@ -1,6 +1,6 @@
 import { IDENTITY, identityBlock, retrieveSections, compactProfile } from "./portfolio-knowledge";
 import { findTechMentions } from "./tech-evidence";
-import { quickAnswer } from "./quick-answers";
+import { quickAnswer, fallbackAnswer } from "./quick-answers";
 
 /**
  * "Ask Talha" orchestration — Gemini PRIMARY, GLM FALLBACK.
@@ -254,8 +254,11 @@ async function* streamGLM(
     body: JSON.stringify({
       model: p.model,
       temperature: 0.35,
-      max_tokens: 700,
+      max_tokens: 500,
       stream: true,
+      // glm-4.6 runs a hidden reasoning pass by default (20-40s!);
+      // disabling it is what makes fallback answers fast
+      thinking: { type: "disabled" },
       messages: [
         { role: "system", content: system },
         { role: "user", content: user },
@@ -305,6 +308,7 @@ export function streamAssistant(question: string, history: Turn[]): ReadableStre
         }
       };
       const t0 = Date.now();
+      let emitted = false;
       const retrievalStart = Date.now();
 
       try {
@@ -358,6 +362,7 @@ export function streamAssistant(question: string, history: Turn[]): ReadableStre
         const providerStart = Date.now();
 
         const emit = (chunk: string) => {
+          emitted = true;
           send({ type: "delta", text: chunk });
         };
 
@@ -392,18 +397,38 @@ export function streamAssistant(question: string, history: Turn[]): ReadableStre
           total_ms: Date.now() - t0,
         });
         console.log(
-          `[Portfolio AI] provider=gemini retrieval=${retrievalMs}ms provider_ms=${Date.now() - providerStart}ms total=${Date.now() - t0}ms fallback=${usedFallback}`
+          `[Portfolio AI] provider=${usedFallback ? "glm" : "gemini"} retrieval=${retrievalMs}ms provider_ms=${Date.now() - providerStart}ms total=${Date.now() - t0}ms fallback=${usedFallback}`
         );
       } catch (err) {
         console.error("[Portfolio AI] failed:", err instanceof Error ? err.message : err);
-        send({
-          type: "error",
-          message:
-            err instanceof MissingKeyError
-              ? "The AI assistant isn't configured on this deployment yet."
-              : "I'm temporarily unable to analyze the portfolio right now. Please try again in a moment.",
-          detail: err instanceof Error ? err.message.slice(0, 160) : undefined,
-        });
+
+        // RESILIENT FALLBACK — if nothing streamed yet, answer known
+        // question types from the curated evidence layer instead of
+        // leaving the visitor with an error.
+        const ctx = history.slice(-2).map((h) => h.content).join(" ");
+        const rescue = !emitted ? fallbackAnswer(question, ctx) : null;
+        if (rescue) {
+          console.warn(`[Portfolio AI] provider outage → curated fallback for: ${question.slice(0, 60)}`);
+          send({
+            type: "meta",
+            provider: "instant",
+            fallback_used: true,
+            retrieval_ms: 0,
+            actions: rescue.actions,
+            follow_ups: rescue.followUps,
+          });
+          send({ type: "delta", text: rescue.text });
+          send({ type: "done", provider: "instant", fallback_used: true, total_ms: Date.now() - t0 });
+        } else {
+          send({
+            type: "error",
+            message:
+              err instanceof MissingKeyError
+                ? "The AI assistant isn't configured on this deployment yet."
+                : "I'm temporarily unable to analyze the portfolio right now. Please try again in a moment.",
+            detail: err instanceof Error ? err.message.slice(0, 160) : undefined,
+          });
+        }
       } finally {
         controller.close();
       }
