@@ -76,9 +76,19 @@ type ProviderInfo = GlmProvider | GeminiProvider;
 
 export function pickProvider(): ProviderInfo {
   if (process.env.GLM_API_KEY)
-    return { name: "glm", model: process.env.GLM_MODEL || "glm-4.6", key: process.env.GLM_API_KEY };
+    return {
+      name: "glm",
+      model: process.env.GLM_MODEL || "glm-4.6",
+      key: process.env.GLM_API_KEY,
+      baseUrl: (process.env.GLM_BASE_URL || "https://api.z.ai/api/paas/v4").replace(/\/$/, ""),
+    };
   if (process.env.GEMINI_API_KEY)
-    return { name: "gemini", model: process.env.GEMINI_MODEL || "gemini-2.0-flash", key: process.env.GEMINI_API_KEY };
+    return {
+      name: "gemini",
+      model: process.env.GEMINI_MODEL || "gemini-2.0-flash",
+      key: process.env.GEMINI_API_KEY,
+      baseUrl: "",
+    };
   throw new MissingKeyError();
 }
 
@@ -151,7 +161,7 @@ Style:
 
 /* ── provider calls ──────────────────────────────────────────── */
 async function callGLM(
-  p: { model: string; key: string },
+  p: { model: string; key: string; baseUrl: string },
   system: string,
   user: string,
   signal: AbortSignal
@@ -160,7 +170,7 @@ async function callGLM(
   let lastErr: unknown = new Error("untried");
   for (const model of models) {
     try {
-      const res = await fetch("https://api.z.ai/api/paas/v4/chat/completions", {
+      const res = await fetch(`${p.baseUrl}/chat/completions`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${p.key}` },
         body: JSON.stringify({
@@ -190,7 +200,7 @@ async function callGLM(
 }
 
 async function callGemini(
-  p: { model: string; key: string },
+  p: { model: string; key: string; baseUrl: string },
   system: string,
   user: string,
   signal: AbortSignal

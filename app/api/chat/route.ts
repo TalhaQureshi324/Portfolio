@@ -93,12 +93,15 @@ export async function POST(req: Request) {
         { status: 503 }
       );
     }
-    console.error("[Portfolio AI] provider failure:", err instanceof Error ? err.message : err);
+    const detail = err instanceof Error ? err.message.slice(0, 160) : "unknown provider error";
+    console.error("[Portfolio AI] provider failure:", detail);
     return NextResponse.json(
       {
         ok: false,
         error:
           "I'm temporarily unable to analyze the portfolio right now. Please try again in a moment.",
+        // diagnostics (no secrets — status/response snippet only)
+        detail,
       },
       { status: 503 }
     );
