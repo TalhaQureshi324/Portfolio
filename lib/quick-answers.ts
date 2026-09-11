@@ -197,6 +197,10 @@ function curated(q: string): QuickResult | null {
       /\b(redis|playwright|pytorch|react|next\.?js|node|python|fastapi|aws|kubernetes|docker|tensorflow)\b/.test(q));
   if (jdSpecific) return null;
 
+  /* comparisons need reasoning across projects — LLM path
+     (outage fallback serves the all-projects list) */
+  if (/\b(compare|comparison|versus|vs\.?|difference between|which is (better|stronger|more)|more (mature|impressive|complex|challenging))\b/.test(q)) return null;
+
   /* unique value / why hire */
   if (/\b(unique|differen(t|ce)|stand out|stands out|special\b|why (should|would|hire)|what (he )?(bring|brings|offer)|value proposition|convince|strengths?)\b/.test(q))
     return {
