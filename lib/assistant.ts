@@ -87,7 +87,7 @@ export function pickProvider(): ProviderInfo {
   if (process.env.GEMINI_API_KEY)
     return {
       name: "gemini",
-      model: process.env.GEMINI_MODEL || "gemini-2.0-flash",
+      model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
       key: process.env.GEMINI_API_KEY,
       baseUrl: "https://generativelanguage.googleapis.com/v1beta",
     };
@@ -207,7 +207,7 @@ async function callGemini(
   user: string,
   signal: AbortSignal
 ): Promise<string> {
-  const models = [p.model, "gemini-1.5-flash"].filter((m, i, a) => a.indexOf(m) === i);
+  const models = [p.model, "gemini-2.0-flash", "gemini-1.5-flash"].filter((m, i, a) => a.indexOf(m) === i);
   let lastErr: unknown = new Error("untried");
   for (const model of models) {
     try {
