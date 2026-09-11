@@ -1,14 +1,12 @@
 import { NextResponse } from "next/server";
-import { answerQuestion, answerWithLLM, sanitizeActions, type Turn } from "@/lib/assistant";
-import { ALL_ENTRIES } from "@/lib/knowledge";
+import { askAssistant, MissingKeyError, type Turn } from "@/lib/assistant";
 
 /**
  * "Ask Talha" endpoint — internet-facing, so:
- * - per-IP in-memory rate limit (20 questions / 10 min)
+ * - per-IP in-memory rate limit (30 questions / 10 min)
  * - input length + history caps
- * - LLM key(s) stay server-side; client never sees credentials
- * - actions are allowlisted; unknown targets are dropped
- * - the deterministic knowledge engine is always the fallback
+ * - LLM keys (GLM_API_KEY / GEMINI_API_KEY) stay server-side only
+ * - provider failure = honest "temporarily unavailable", never a fake answer
  */
 
 const WINDOW_MS = 10 * 60 * 1000;
@@ -29,7 +27,6 @@ function rateLimited(ip: string): boolean {
   return rec.count > MAX_PER_WINDOW;
 }
 
-// housekeeping so the map can't grow unbounded
 setInterval(() => {
   const now = Date.now();
   for (const [ip, rec] of hits) if (now > rec.reset) hits.delete(ip);
@@ -68,7 +65,7 @@ export async function POST(req: Request) {
     ? body.history
         .filter(
           (t): t is Turn =>
-            t &&
+            !!t &&
             (t.role === "user" || t.role === "assistant") &&
             typeof t.content === "string"
         )
@@ -77,30 +74,33 @@ export async function POST(req: Request) {
     : [];
 
   try {
-    // retrieval context for the optional LLM layer: top entries by relevance
-    const { answerQuestion: localAnswer } = await import("@/lib/assistant");
-    const base = localAnswer(question, history);
-    const knowledgeContext = ALL_ENTRIES.filter((e) => e.id === base.topic || base.message.includes(e.message.slice(0, 40)))
-      .map((e) => `${e.id}: ${e.message}`)
-      .join("\n\n");
+    console.log(`[Portfolio AI] request received from ${ip === "unknown" ? "anonymous" : "visitor"} — ${question.length} chars`);
+    const result = await askAssistant(question, history);
 
-    const llm = await answerWithLLM(question, history, knowledgeContext || base.message);
-    const answer = llm ?? base;
-    return NextResponse.json({
+    const payload: Record<string, unknown> = {
       ok: true,
-      message: answer.message,
-      actions: sanitizeActions(answer.actions),
-      followUps: answer.followUps.slice(0, 3),
-    });
-  } catch {
-    // never expose internals
+      message: result.message,
+      actions: result.actions,
+      follow_ups: result.followUps,
+    };
+    if (process.env.NODE_ENV !== "production") payload.meta = result.meta;
+    return NextResponse.json(payload);
+  } catch (err) {
+    if (err instanceof MissingKeyError) {
+      console.error("[Portfolio AI] no provider configured");
+      return NextResponse.json(
+        { ok: false, error: "The AI assistant isn't configured on this deployment yet." },
+        { status: 503 }
+      );
+    }
+    console.error("[Portfolio AI] provider failure:", err instanceof Error ? err.message : err);
     return NextResponse.json(
       {
         ok: false,
         error:
-          "The portfolio assistant is temporarily unavailable. You can still explore the portfolio directly below.",
+          "I'm temporarily unable to analyze the portfolio right now. Please try again in a moment.",
       },
-      { status: 500 }
+      { status: 503 }
     );
   }
 }

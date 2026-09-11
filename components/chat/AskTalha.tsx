@@ -14,7 +14,7 @@ import { scrollToSection, highlightProjects } from "@/lib/utils";
 
 interface ChatAction {
   label: string;
-  type: "scroll_to" | "resume" | "email" | "github" | "linkedin" | "contact_form";
+  type: string;
   target?: string;
 }
 interface Msg {
