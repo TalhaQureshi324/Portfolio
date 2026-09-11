@@ -66,11 +66,13 @@ interface GlmProvider {
   name: "glm";
   model: string;
   key: string;
+  baseUrl: string;
 }
 interface GeminiProvider {
   name: "gemini";
   model: string;
   key: string;
+  baseUrl: string;
 }
 type ProviderInfo = GlmProvider | GeminiProvider;
 
@@ -87,7 +89,7 @@ export function pickProvider(): ProviderInfo {
       name: "gemini",
       model: process.env.GEMINI_MODEL || "gemini-2.0-flash",
       key: process.env.GEMINI_API_KEY,
-      baseUrl: "",
+      baseUrl: "https://generativelanguage.googleapis.com/v1beta",
     };
   throw new MissingKeyError();
 }
@@ -210,7 +212,7 @@ async function callGemini(
   for (const model of models) {
     try {
       const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${p.key}`,
+        `${p.baseUrl}/models/${model}:generateContent?key=${p.key}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -325,9 +327,19 @@ export async function askAssistant(question: string, history: Turn[]): Promise<A
   let usedModel = provider.model;
 
   if (provider.name === "glm") {
-    text = await callGLM({ model: provider.model, key: provider.key }, system, user, signal);
+    text = await callGLM(
+      { model: provider.model, key: provider.key, baseUrl: provider.baseUrl },
+      system,
+      user,
+      signal
+    );
   } else {
-    text = await callGemini({ model: provider.model, key: provider.key }, system, user, signal);
+    text = await callGemini(
+      { model: provider.model, key: provider.key, baseUrl: provider.baseUrl },
+      system,
+      user,
+      signal
+    );
   }
 
   console.log(`[Portfolio AI] LLM response received (${text.length} chars)`);
