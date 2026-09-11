@@ -78,7 +78,7 @@ export function pickProviders(): { gemini: GeminiProvider | null; glm: GlmProvid
     gemini: process.env.GEMINI_API_KEY
       ? {
           name: "gemini",
-          model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
+          model: process.env.GEMINI_MODEL || "gemini-3.6-flash",
           key: process.env.GEMINI_API_KEY,
           baseUrl: "https://generativelanguage.googleapis.com/v1beta",
         }
