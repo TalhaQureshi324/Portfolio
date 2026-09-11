@@ -337,6 +337,7 @@ export function streamAssistant(question: string, history: Turn[]): ReadableStre
             err instanceof MissingKeyError
               ? "The AI assistant isn't configured on this deployment yet."
               : "I'm temporarily unable to analyze the portfolio right now. Please try again in a moment.",
+          detail: err instanceof Error ? err.message.slice(0, 160) : undefined,
         });
       } finally {
         controller.close();
