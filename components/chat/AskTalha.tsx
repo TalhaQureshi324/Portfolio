@@ -268,6 +268,7 @@ export default function AskTalha() {
           <motion.div
             role="dialog"
             aria-label="Ask Talha — portfolio assistant"
+            data-lenis-prevent
             {...panelMotion}
             className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-[96] flex h-[min(76vh,620px)] flex-col overflow-hidden rounded-sm border border-line bg-paper shadow-card
                        sm:inset-x-auto sm:right-6 sm:h-[min(72vh,640px)] sm:w-[400px]"
@@ -293,11 +294,12 @@ export default function AskTalha() {
               </button>
             </div>
 
-            {/* messages */}
+            {/* messages — bounded flex child; lenis/scroll-chaining contained
+                here so wheel/touch never bleeds into the page behind */}
             <div
               ref={listRef}
               aria-live="polite"
-              className="flex-1 space-y-5 overflow-y-auto px-5 py-5"
+              className="flex-1 min-h-0 space-y-5 overflow-y-auto overscroll-contain px-5 py-5 [touch-action:pan-y]"
             >
               {messages.map((m, i) => (
                 <motion.div
