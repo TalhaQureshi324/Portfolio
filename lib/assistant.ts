@@ -1,5 +1,6 @@
 import { IDENTITY, identityBlock, retrieveSections, compactProfile } from "./portfolio-knowledge";
 import { findTechMentions } from "./tech-evidence";
+import { quickAnswer } from "./quick-answers";
 
 /**
  * "Ask Talha" orchestration — Gemini PRIMARY, GLM FALLBACK.
@@ -132,6 +133,8 @@ export interface ChatAction {
   label: string;
   type: string;
   target?: string;
+  /** navigation commands — the UI runs these automatically on receipt */
+  auto?: boolean;
 }
 
 const SECTION_ACTIONS: Record<string, ChatAction> = {
@@ -238,13 +241,13 @@ async function* streamGeminiText(
   }
 }
 
-/* ── GLM fallback (non-streamed; emitted as one chunk) ───────── */
-async function callGLM(
+/* ── GLM fallback (streamed via OpenAI-compatible SSE) ───────── */
+async function* streamGLM(
   p: GlmProvider,
   system: string,
   user: string,
   signal: AbortSignal
-): Promise<string> {
+): AsyncGenerator<string> {
   const res = await fetch(`${p.baseUrl}/chat/completions`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${p.key}` },
@@ -252,6 +255,7 @@ async function callGLM(
       model: p.model,
       temperature: 0.35,
       max_tokens: 700,
+      stream: true,
       messages: [
         { role: "system", content: system },
         { role: "user", content: user },
@@ -259,11 +263,32 @@ async function callGLM(
     }),
     signal,
   });
-  if (!res.ok) throw new Error(`GLM ${res.status}: ${(await res.text()).slice(0, 160)}`);
-  const data = await res.json();
-  const text = data?.choices?.[0]?.message?.content;
-  if (typeof text !== "string" || !text.trim()) throw new Error("GLM returned empty content");
-  return text;
+  if (!res.ok || !res.body)
+    throw new Error(`GLM ${res.status}: ${(await res.text()).slice(0, 160)}`);
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+    for (const line of lines) {
+      const s = line.trim();
+      if (!s.startsWith("data:")) continue;
+      const payload = s.slice(5).trim();
+      if (payload === "[DONE]") return;
+      try {
+        const json = JSON.parse(payload);
+        const text = json?.choices?.[0]?.delta?.content;
+        if (typeof text === "string" && text) yield text;
+      } catch {
+        /* ignore malformed SSE line */
+      }
+    }
+  }
 }
 
 /* ── streaming orchestration ─────────────────────────────────── */
@@ -283,6 +308,33 @@ export function streamAssistant(question: string, history: Turn[]): ReadableStre
       const retrievalStart = Date.now();
 
       try {
+        // INSTANT PATH — ready-made, evidence-grounded answers for the
+        // common questions and navigation commands. No retrieval, no LLM.
+        const instant = quickAnswer(
+          question,
+          history.slice(-2).map((h) => h.content).join(" ")
+        );
+        if (instant) {
+          send({
+            type: "meta",
+            provider: "instant",
+            fallback_used: false,
+            retrieval_ms: Date.now() - retrievalStart,
+            actions: instant.actions,
+            follow_ups: instant.followUps,
+          });
+          send({ type: "delta", text: instant.text });
+          send({
+            type: "done",
+            provider: "instant",
+            fallback_used: false,
+            total_ms: Date.now() - t0,
+            follow_ups: instant.followUps,
+          });
+          console.log(`[Portfolio AI] provider=instant total=${Date.now() - t0}ms`);
+          return;
+        }
+
         const intent = classifyIntent(question);
         const { evidence, sectionIds } = buildEvidence(question, history, intent);
         const retrievalMs = Date.now() - retrievalStart;
@@ -320,13 +372,15 @@ export function streamAssistant(question: string, history: Turn[]): ReadableStre
             if (!providers.glm) throw err;
             usedFallback = true;
             console.warn(`[Portfolio AI] gemini failed (${err instanceof Error ? err.message : err}) → glm fallback`);
-            const text = await callGLM(providers.glm, system, user, abortSignal(25000));
-            emit(text);
+            for await (const chunk of streamGLM(providers.glm, system, user, abortSignal(25000))) {
+              emit(chunk);
+            }
           }
         } else if (providers.glm) {
-          const text = await callGLM(providers.glm, system, user, abortSignal(25000));
-          emit(text);
           usedFallback = true;
+          for await (const chunk of streamGLM(providers.glm, system, user, abortSignal(25000))) {
+            emit(chunk);
+          }
         } else {
           throw new Error("No AI provider configured");
         }

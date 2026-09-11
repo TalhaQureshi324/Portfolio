@@ -16,6 +16,7 @@ interface ChatAction {
   label: string;
   type: string;
   target?: string;
+  auto?: boolean;
 }
 interface Msg {
   role: "user" | "assistant";
@@ -80,7 +81,7 @@ export default function AskTalha() {
   }
 
   function runAction(a: ChatAction) {
-    if (a.type === "scroll_to" && a.target) {
+    if ((a.type === "scroll_to" || a.type === "scroll_to_project") && a.target) {
       scrollToSection(a.target);
       if (a.target !== "contact" && a.target !== "expertise") {
         const projectId =
@@ -159,8 +160,30 @@ export default function AskTalha() {
               actions?: ChatAction[];
               follow_ups?: string[];
             };
-            if (payload.type === "delta" && payload.text) patchLast({ content: payload.text, streaming: true });
-            else if (payload.type === "done") {
+            if (payload.type === "delta" && payload.text) {
+              // deltas APPEND — Gemini/GLM stream many small chunks
+              setMessages((prev) => {
+                const next = [...prev];
+                const last = next[next.length - 1];
+                if (last && last.role === "assistant")
+                  next[next.length - 1] = { ...last, content: (last.content ?? "") + payload.text, streaming: true };
+                return next;
+              });
+            } else if (payload.type === "meta") {
+              // attach action chips; run navigation commands automatically
+              if (Array.isArray(payload.actions) && payload.actions.length) {
+                patchLast({ actions: payload.actions });
+                const autoAction = payload.actions.find((a) => a.auto);
+                if (autoAction) {
+                  runAction(autoAction);
+                  // on mobile the panel closes inside runAction; on desktop
+                  // keep it open so the visitor can keep chatting
+                }
+              }
+              // instant answers carry their follow-ups on meta
+              if (Array.isArray(payload.follow_ups) && payload.follow_ups.length)
+                setSuggestions(payload.follow_ups);
+            } else if (payload.type === "done") {
               patchLast({ streaming: false });
               if (Array.isArray(payload.follow_ups)) setSuggestions(payload.follow_ups);
               setLoading(false);
