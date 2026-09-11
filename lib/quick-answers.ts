@@ -176,7 +176,7 @@ function noteAnswer(q: string): QuickResult | null {
       actions: [A.deepfake, A.notes],
       followUps: ["What accuracy was achieved?", "How does LIME explainability work?", "What is his strongest CV project?"],
     };
-  if (/(latency|real-?time|60ms|round-?trip)/.test(q) && /(budget|pipeline|inference|why|how|manage)/.test(q))
+  if (/(latency|real-?time|60ms|round-?trip)/.test(q) && !/voice|librosa|audio|speech|websockets/.test(q) && /(budget|pipeline|inference|why|how|manage)/.test(q))
     return {
       text: NOTES[3].answer,
       actions: [A.malaria, A.notes],
