@@ -259,7 +259,8 @@ async function startProviderRace(
   providers: Provider[],
   system: string,
   user: string,
-  intent: string
+  intent: string,
+  failures: string[] = []
 ): Promise<{ provider: string; chunks: AsyncGenerator<string> }> {
   const attempts = providers.map((p) => {
     const ctrl = new AbortController();
@@ -280,6 +281,7 @@ async function startProviderRace(
       console.log(
         `[${a.p.name.toUpperCase()}] intent=${intent} model=${a.p.model} latency=${Date.now() - a.started}ms status=${status}${aborted ? "" : " :: " + String(err instanceof Error ? err.message : err).slice(0, 120)}`
       );
+      failures.push(`${a.p.name.toUpperCase()} ${status}${aborted ? "" : ": " + String(err instanceof Error ? err.message : err).slice(0, 100)}`);
       if (!settled && --pending === 0) {
         settled = true;
         reject(new Error("all providers failed"));
@@ -392,9 +394,10 @@ export function streamAssistant(question: string, history: Turn[], hints?: ChatH
         const user = `VISITOR QUESTION: ${question}`;
 
         /* ── PARALLEL LLM RACE — Kimi ∥ GLM, first token wins ────── */
+        const raceFailures: string[] = [];
         if (providers.length > 0) {
           try {
-            const race = await startProviderRace(providers, system, user, intent);
+            const race = await startProviderRace(providers, system, user, intent, raceFailures);
             emitted = true;
             for await (const chunk of race.chunks) send({ type: "delta", text: chunk });
             send({
@@ -409,7 +412,7 @@ export function streamAssistant(question: string, history: Turn[], hints?: ChatH
           } catch (err) {
             console.log(`[RACE] intent=${intent} all providers failed → local reasoning (${err instanceof Error ? err.message : err})`);
             if (emitted) {
-              send({ type: "done", provider: "partial", fallback_used: true, total_ms: Date.now() - t0 });
+              send({ type: "done", provider: "partial", fallback_used: true, total_ms: Date.now() - t0, diag: raceFailures });
               return;
             }
           }
@@ -440,6 +443,7 @@ export function streamAssistant(question: string, history: Turn[], hints?: ChatH
           fallback_used: true,
           total_ms: Date.now() - t0,
           follow_ups: local.followUps,
+          diag: raceFailures,
         });
         console.log(`[LOCAL] intent=${intent} total=${Date.now() - t0}ms`);
       } catch (err) {
