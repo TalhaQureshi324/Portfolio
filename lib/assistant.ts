@@ -216,6 +216,13 @@ export async function answerWithLLM(
   const openai = process.env.OPENAI_API_KEY;
   if (!gemini && !openai) return null;
 
+  // circuit breaker: skip the LLM for a few minutes after repeated
+  // failures (quota exhausted / model retired) so visitors never wait
+  // on a guaranteed-failure request — the local engine answers instead.
+  const now = Date.now();
+  llmFailures = llmFailures.filter((t) => now - t < 5 * 60 * 1000);
+  if (llmFailures.length >= 3) return null;
+
   const system = `You are "Ask Talha" — the portfolio assistant on Muhammad Talha Qureshi's portfolio website.
 Rules:
 - Answer ONLY from the PORTFOLIO CONTEXT below. If something isn't there, say you can't confirm it from the portfolio.
@@ -239,19 +246,35 @@ QUESTION: ${question}`;
     const timer = setTimeout(() => controller.abort(), 15000);
     let text = "";
     if (gemini) {
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${gemini}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: system }] }],
-            generationConfig: { temperature: 0.3, maxOutputTokens: 400 },
-          }),
-          signal: controller.signal,
+      // try current Gemini models in order (Google retires models over time)
+      const models = [process.env.GEMINI_MODEL || "gemini-2.0-flash", "gemini-1.5-flash"];
+      let data: any = null;
+      let lastErr: unknown = null;
+      for (const model of models) {
+        try {
+          const res = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${gemini}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: system }] }],
+                generationConfig: { temperature: 0.3, maxOutputTokens: 400 },
+              }),
+              signal: controller.signal,
+            }
+          );
+          if (!res.ok) {
+            lastErr = `${res.status}`;
+            continue;
+          }
+          data = await res.json();
+          break;
+        } catch (err) {
+          lastErr = err;
         }
-      );
-      const data = await res.json();
+      }
+      if (!data) throw lastErr ?? new Error("gemini failed");
       text = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
     } else {
       const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -275,8 +298,12 @@ QUESTION: ${question}`;
     if (typeof json.message !== "string" || json.message.length < 8) return null;
     const labels: string[] = Array.isArray(json.labels) ? json.labels.slice(0, 2) : [];
     const actions = base.actions.filter((a) => labels.includes(a.label));
+    llmFailures = [];
     return { message: json.message, actions, followUps: base.followUps, topic: base.topic, source: "llm" };
   } catch {
+    llmFailures.push(Date.now());
     return null; // graceful fallback to the deterministic answer
   }
 }
+
+let llmFailures: number[] = [];
