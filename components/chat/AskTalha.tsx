@@ -22,6 +22,7 @@ interface Msg {
   content: string;
   actions?: ChatAction[];
   error?: boolean;
+  streaming?: boolean;
 }
 
 const INITIAL_SUGGESTIONS = [
@@ -107,38 +108,78 @@ export default function AskTalha() {
     if (!q || loading) return;
     setInput("");
     const history = messages.slice(-8).map((m) => ({ role: m.role, content: m.content }));
-    setMessages((m) => [...m, { role: "user", content: q }]);
+
+    // user message + streaming assistant placeholder
+    setMessages((prev) => [
+      ...prev,
+      { role: "user", content: q },
+      { role: "assistant", content: "", streaming: true },
+    ]);
     setLoading(true);
+
+    const patchLast = (patch: Partial<Msg>) =>
+      setMessages((prev) => {
+        const next = [...prev];
+        const last = next[next.length - 1];
+        if (last && last.role === "assistant") next[next.length - 1] = { ...last, ...patch };
+        return next;
+      });
+
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question: q, history }),
       });
-      const data = await res.json();
-      if (data.ok) {
-        setMessages((m) => [
-          ...m,
-          { role: "assistant", content: data.message, actions: data.actions },
-        ]);
-        if (Array.isArray(data.followUps)) setSuggestions(data.followUps);
-      } else {
-        setMessages((m) => [
-          ...m,
-          { role: "assistant", content: data.error ?? "Something went wrong.", error: true },
-        ]);
+
+      if (!res.ok || !res.body) {
+        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        patchLast({ content: data?.error ?? "The assistant is temporarily unavailable. Please try again.", error: true, streaming: false });
+        setLoading(false);
+        return;
       }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const events = buffer.split("\n\n");
+        buffer = events.pop() ?? "";
+        for (const evt of events) {
+          if (!evt.startsWith("data: ")) continue;
+          try {
+            const payload = JSON.parse(evt.slice(6)) as {
+              type: string;
+              text?: string;
+              error?: string;
+              actions?: ChatAction[];
+              follow_ups?: string[];
+            };
+            if (payload.type === "delta" && payload.text) patchLast({ content: payload.text, streaming: true });
+            else if (payload.type === "done") {
+              patchLast({ streaming: false });
+              if (Array.isArray(payload.follow_ups)) setSuggestions(payload.follow_ups);
+              setLoading(false);
+            } else if (payload.type === "error") {
+              patchLast({ content: payload.error ?? "The assistant is temporarily unavailable.", error: true, streaming: false });
+            }
+          } catch {
+            /* ignore malformed event */
+          }
+        }
+      }
+      patchLast({ streaming: false });
+      setLoading(false);
     } catch {
-      setMessages((m) => [
-        ...m,
-        {
-          role: "assistant",
-          content:
-            "The assistant is temporarily unavailable — the network didn't cooperate. Your question can be retried.",
-          error: true,
-        },
-      ]);
-    } finally {
+      patchLast({
+        content: "The assistant is temporarily unavailable — the network didn't cooperate. Please try again.",
+        error: true,
+        streaming: false,
+      });
       setLoading(false);
     }
   }

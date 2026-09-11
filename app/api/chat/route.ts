@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
-import { askAssistant, MissingKeyError, type Turn } from "@/lib/assistant";
+import { streamAssistant, type Turn } from "@/lib/assistant";
 
 /**
  * "Ask Talha" endpoint — internet-facing, so:
  * - per-IP in-memory rate limit (30 questions / 10 min)
  * - input length + history caps
- * - LLM keys (GLM_API_KEY / GEMINI_API_KEY) stay server-side only
+ * - LLM keys (GEMINI_API_KEY / GLM_API_KEY) stay server-side only
+ * - responses stream as SSE: meta → deltas → done (or error)
  * - provider failure = honest "temporarily unavailable", never a fake answer
  */
 
@@ -73,37 +74,13 @@ export async function POST(req: Request) {
         .map((t) => ({ role: t.role, content: t.content.slice(0, 800) }))
     : [];
 
-  try {
-    console.log(`[Portfolio AI] request received from ${ip === "unknown" ? "anonymous" : "visitor"} — ${question.length} chars`);
-    const result = await askAssistant(question, history);
-
-    const payload: Record<string, unknown> = {
-      ok: true,
-      message: result.message,
-      actions: result.actions,
-      follow_ups: result.followUps,
-    };
-    if (process.env.NODE_ENV !== "production") payload.meta = result.meta;
-    return NextResponse.json(payload);
-  } catch (err) {
-    if (err instanceof MissingKeyError) {
-      console.error("[Portfolio AI] no provider configured");
-      return NextResponse.json(
-        { ok: false, error: "The AI assistant isn't configured on this deployment yet." },
-        { status: 503 }
-      );
-    }
-    const detail = err instanceof Error ? err.message.slice(0, 160) : "unknown provider error";
-    console.error("[Portfolio AI] provider failure:", detail);
-    return NextResponse.json(
-      {
-        ok: false,
-        error:
-          "I'm temporarily unable to analyze the portfolio right now. Please try again in a moment.",
-        // diagnostics (no secrets — status/response snippet only)
-        detail,
-      },
-      { status: 503 }
-    );
-  }
+  const stream = streamAssistant(question, history);
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
+    },
+  });
 }

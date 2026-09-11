@@ -2,12 +2,11 @@ import { IDENTITY, identityBlock, retrieveSections, compactProfile } from "./por
 import { findTechMentions } from "./tech-evidence";
 
 /**
- * "Ask Talha" orchestration — UNDERSTAND → RETRIEVE → ANALYZE → ANSWER.
+ * "Ask Talha" orchestration — Gemini PRIMARY, GLM FALLBACK.
  *
- * The LLM (GLM preferred, Gemini secondary) is the reasoning engine;
- * the structured portfolio knowledge is the only source of facts.
- * There are NO canned substantive answers: if the LLM layer is
- * unavailable the endpoint reports it honestly.
+ * Flow: question → intent → relevance retrieval → compact context →
+ * Gemini (streamed) → on failure GLM → on both failing an honest
+ * "temporarily unavailable" message. No canned substantive answers.
  */
 
 export interface Turn {
@@ -15,6 +14,9 @@ export interface Turn {
   content: string;
 }
 
+export class MissingKeyError extends Error {}
+
+/* ── intent classification (retrieval routing only) ──────────── */
 export type Intent =
   | "GENERAL_PORTFOLIO"
   | "PROJECT_EXPLANATION"
@@ -27,27 +29,13 @@ export type Intent =
   | "CONTACT"
   | "OUT_OF_SCOPE";
 
-export class MissingKeyError extends Error {
-  constructor() {
-    super("No LLM provider configured on the server (set GLM_API_KEY or GEMINI_API_KEY).");
-  }
-}
-
-export interface AssistantResult {
-  message: string;
-  actions: Array<{ type: string; target?: string; label: string }>;
-  followUps: string[];
-  meta: { provider: string; model: string; intent: string };
-}
-
-/* ── intent classification (retrieval/routing only) ──────────── */
 export function classifyIntent(question: string): Intent {
   const q = ` ${question.toLowerCase()} `;
   if (/what (should|could|would) (i|we|one) ask|interview questions|questions for (an|the) interview/i.test(question))
     return "INTERVIEW_QUESTIONS";
   if (/\b(hire|hiring|recruiter|candidate|shortlist|fit|suitable|qualified|recommend)\b/i.test(question))
     return "RECRUITER_FIT";
-  if (/\b(job description|we need|we're hiring|we are hiring|requirements)\b/i.test(question) && ROLE_HINT.test(question))
+  if (/\b(job description|we need|we're hiring|we are hiring|requirements)\b/i.test(question) && /\b(ai|ml|full-?stack|engineer|developer|role|position|skills?)\b/i.test(question))
     return "JOB_REQUIREMENT_ANALYSIS";
   if (/\b(contact|reach|email)\b/.test(q)) return "CONTACT";
   if (/\b(experience|worked|career|intellimind|dev weekends|code alpha|teaching|assistant)\b/.test(q))
@@ -59,53 +47,66 @@ export function classifyIntent(question: string): Intent {
   return "OUT_OF_SCOPE";
 }
 
-const ROLE_HINT = /\b(ai|ml|machine learning|full-?stack|frontend|backend|automation|engineer|developer|role|position|job|skills?|technolog)/i;
+const SYSTEM_RULES = `You are "Ask Talha" — the Portfolio Intelligence Assistant on Muhammad Talha Qureshi's portfolio.
 
-/* ── provider selection ──────────────────────────────────────── */
-interface GlmProvider {
-  name: "glm";
-  model: string;
-  key: string;
-  baseUrl: string;
-}
+Use ONLY the EVIDENCE supplied below. Answer the visitor's actual question directly.
+
+- Never invent technologies, employers, metrics, dates or experience. If the evidence doesn't cover something, say it can't be confirmed from the portfolio.
+- Preserve metric qualifiers exactly: "held-out test set", "on-device benchmark", "local benchmark", "campaign comparison", "observed in lab trials", "field data after rebuild". Never upgrade a benchmark into a production claim.
+- Distinguish documented facts from your assessment; present assessments as assessments.
+- Hiring/suitability questions: run a candidate fit analysis — match each stated requirement to documented evidence with its strength, note gaps, then give a clear recommendation. Strong evidence → confident yes. Missing evidence → say so honestly. Never default to yes; never undersell when evidence is strong.
+- Technology questions: state where and how it was used, and whether that's direct project evidence or just a toolkit listing.
+- Conversational and concise: 2–5 sentences for simple questions; a short requirement-by-requirement breakdown when the visitor lists requirements; 150–300 words for fit analyses.
+- Plain prose only: no markdown headers, no emoji.`;
+
+/* ── providers ───────────────────────────────────────────────── */
 interface GeminiProvider {
   name: "gemini";
   model: string;
   key: string;
   baseUrl: string;
 }
-type ProviderInfo = GlmProvider | GeminiProvider;
+interface GlmProvider {
+  name: "glm";
+  model: string;
+  key: string;
+  baseUrl: string;
+}
 
-export function pickProvider(): ProviderInfo {
-  if (process.env.GLM_API_KEY)
-    return {
-      name: "glm",
-      model: process.env.GLM_MODEL || "glm-4.6",
-      key: process.env.GLM_API_KEY,
-      baseUrl: (process.env.GLM_BASE_URL || "https://api.z.ai/api/paas/v4").replace(/\/$/, ""),
-    };
-  if (process.env.GEMINI_API_KEY)
-    return {
-      name: "gemini",
-      model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
-      key: process.env.GEMINI_API_KEY,
-      baseUrl: "https://generativelanguage.googleapis.com/v1beta",
-    };
-  throw new MissingKeyError();
+export function pickProviders(): { gemini: GeminiProvider | null; glm: GlmProvider | null } {
+  return {
+    gemini: process.env.GEMINI_API_KEY
+      ? {
+          name: "gemini",
+          model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
+          key: process.env.GEMINI_API_KEY,
+          baseUrl: "https://generativelanguage.googleapis.com/v1beta",
+        }
+      : null,
+    glm: process.env.GLM_API_KEY
+      ? {
+          name: "glm",
+          model: process.env.GLM_MODEL || "glm-4.6",
+          key: process.env.GLM_API_KEY,
+          baseUrl: (process.env.GLM_BASE_URL || "https://api.z.ai/api/paas/v4").replace(/\/$/, ""),
+        }
+      : null,
+  };
 }
 
 /* ── retrieval ───────────────────────────────────────────────── */
-function buildEvidence(question: string, history: Turn[], intent: Intent): string {
+function buildEvidence(question: string, history: Turn[], intent: Intent): { evidence: string; sectionIds: string[] } {
   const broad =
     intent === "GENERAL_PORTFOLIO" ||
     intent === "JOB_REQUIREMENT_ANALYSIS" ||
     intent === "RECRUITER_FIT" ||
+    intent === "INTERVIEW_QUESTIONS" ||
     /assess|overview|strongest|all projects|compare|across/i.test(question);
 
   const sections = retrieveSections(question, history.map((h) => h.content), broad);
   const blocks = sections.map((s) => `[${s.title.toUpperCase()}]\n${s.detail}`);
 
-  // explicit requirement matches for recruiter/fit questions
+  // named technology requirements get their relationship-aware evidence
   const mentions = findTechMentions(question);
   if (mentions.length > 0) {
     blocks.push(
@@ -123,234 +124,227 @@ function buildEvidence(question: string, history: Turn[], intent: Intent): strin
     blocks.push("[AI ENGINEERING FIT SUMMARY]\n" + compactProfile());
   }
 
-  return blocks.join("\n\n");
+  return { evidence: blocks.join("\n\n"), sectionIds: sections.map((s) => s.id) };
 }
 
-/* ── system prompt ───────────────────────────────────────────── */
-const JSON_CONTRACT = `OUTPUT: strict JSON only, no markdown fences:
-{"message": string, "actions": [{"type": string, "target": string}], "follow_ups": [string, string, string]}
-- "message": your complete answer, written for the visitor.
-- "actions": 0–2 objects, ONLY with these exact "type" values:
-    "scroll_to_project"  (target: "malaria" | "automation" | "deepfake" | "news" | "commerce" | "voice")
-    "scroll_to_experience" | "scroll_to_expertise" | "scroll_to_contact" | "scroll_to_notes" | "scroll_to_systems"
-    "open_resume" | "open_github" | "open_linkedin" | "open_email"
-  Include only actions relevant to the answer — usually one or two, not a fixed footer.`;
+/* ── actions + follow-ups derived from retrieved evidence ────── */
+export interface ChatAction {
+  label: string;
+  type: string;
+  target?: string;
+}
 
-const SYSTEM_RULES = `You are "Ask Talha" — the Portfolio Intelligence Assistant embedded in Muhammad Talha Qureshi's portfolio.
+const SECTION_ACTIONS: Record<string, ChatAction> = {
+  "featured-malaria": { label: "View the malaria case study →", type: "scroll_to_project", target: "malaria-case-study" },
+  "outbound-automation": { label: "See the automation pipeline →", type: "scroll_to_project", target: "outbound-automation" },
+  "deepfake-detection": { label: "View deepfake detection →", type: "scroll_to_project", target: "deepfake-detection" },
+  "news-nlp": { label: "View the news analyzer →", type: "scroll_to_project", target: "news-nlp" },
+  "b2b-commerce": { label: "View the commerce platform →", type: "scroll_to_project", target: "b2b-commerce" },
+  "voice-pipeline": { label: "View the voice pipeline →", type: "scroll_to_project", target: "voice-pipeline" },
+  experience: { label: "View experience →", type: "scroll_to", target: "experience" },
+  expertise: { label: "Open the tech map →", type: "scroll_to", target: "expertise" },
+  contact: { label: "Open the contact form →", type: "scroll_to", target: "contact" },
+  notes: { label: "Read the engineering notes →", type: "scroll_to", target: "notes" },
+  systems: { label: "Explore the system architectures →", type: "scroll_to", target: "systems" },
+};
 
-Your job is to answer the visitor's ACTUAL question by reasoning over the documented portfolio evidence supplied below. You are not a generic assistant and not a portfolio summarizer.
+const FOLLOWUP_POOLS: Record<string, string[]> = {
+  "featured-malaria": ["How does the monolayer detector work?", "What results did the system achieve?", "What was Talha's role?"],
+  "outbound-automation": ["How does the outreach stay non-generic?", "What stack powers the site audits?", "How would the pipeline scale?"],
+  "deepfake-detection": ["Why the hybrid Xception-LSTM?", "How does LIME explainability work?", "What accuracy was achieved?"],
+  "news-nlp": ["How does the bias analysis work?", "How do 34 sources stay deduplicated?", "What models summarize the articles?"],
+  "b2b-commerce": ["What is the headless architecture?", "How did Redis caching help LCP?", "How do approval flows work?"],
+  "voice-pipeline": ["How is the latency budget managed?", "What does WebSockets handle?", "What was the round-trip latency?"],
+  intellimind: ["What does he build at Intellimind?", "Does he have production AI experience?", "What backend stack does he use?"],
+  experience: ["Does he have teaching experience?", "Where does he currently work?", "Has he worked with NLP?"],
+  identity: ["What are his strongest projects?", "What technologies does he use?", "How can I contact him?"],
+  "tech-evidence-index": ["Where has he used PyTorch?", "What's his strongest CV project?", "Does he have full-stack experience?"],
+};
 
-Hard rules:
-- Facts about Talha come ONLY from the EVIDENCE block. If the evidence doesn't establish something, say explicitly that it can't be confirmed from the portfolio. Never use general world knowledge to fill gaps about Talha.
-- Never invent employers, clients, technologies, metrics, years, production scale, achievements or results.
-- Preserve metric qualifiers exactly: "held-out test set", "on-device benchmark", "local benchmark", "campaign comparison", "observed in lab trials", "field data after rebuild". Never upgrade a benchmark into a production claim.
-- Distinguish FACT (documented evidence) from ASSESSMENT (your reasoning about that evidence). Present assessments as assessments.
-- Speak about Talha in the third person. You are his portfolio assistant, not Talha himself.
-- Tone: calm, technically precise, confident, honest. No marketing fluff, no overselling, no hedging when the evidence is strong.
+function contextualFollowUps(sectionIds: string[]): string[] {
+  const out: string[] = [];
+  for (const id of sectionIds) {
+    const pool = FOLLOWUP_POOLS[id];
+    if (!pool) continue;
+    for (const f of pool) if (!out.includes(f) && out.length < 3) out.push(f);
+  }
+  if (out.length === 0)
+    out.push("What does Talha specialize in?", "What are his strongest projects?", "How can I contact him?");
+  return out.slice(0, 3);
+}
 
-Reasoning behavior:
-- Answer the actual question asked. If a recruiter asks whether Talha suits a role, do NOT recite his biography — instead: identify the role and requirements, match each requirement against documented evidence with its strength (direct project evidence / direct experience / toolkit-only / not documented), identify gaps, then give a clear recommendation.
-- Fit levels you may use: strong match worth interviewing / promising match with gaps to validate / not enough evidence for the stated requirements. Choose honestly. Hiring recommendations mean "worth interviewing", never "guaranteed performance".
-- If a senior role or a years-of-experience requirement is stated and the evidence doesn't establish it, say so and recommend validating it in an interview.
-- Technology questions: state where and how the technology was used, and whether that is direct project evidence or just a toolkit listing.
-- Interview-question requests: generate questions derived ONLY from documented work.
-- Off-topic requests (code, general knowledge, chit-chat): one-sentence polite redirect to Talha's work, then offer a portfolio topic.
+function deriveActions(sectionIds: string[]): ChatAction[] {
+  const out: ChatAction[] = [];
+  for (const id of sectionIds) {
+    const a = SECTION_ACTIONS[id];
+    if (a && !out.some((x) => x.label === a.label)) out.push(a);
+    if (out.length >= 2) break;
+  }
+  return out;
+}
 
-Style:
-- Recruiter/fit analyses: 150–300 words. Simple questions: 2–5 sentences. Job-description analyses: use a short requirement-by-requirement breakdown.
-- Clean prose, no markdown headers, no emoji.
-- End by listing exactly 3 short suggested follow-up questions, contextual to your answer (not generic boilerplate).`;
-
-/* ── provider calls ──────────────────────────────────────────── */
-async function callGLM(
-  p: { model: string; key: string; baseUrl: string },
+/* ── Gemini streaming call (SSE) ─────────────────────────────── */
+async function* streamGeminiText(
+  p: GeminiProvider,
   system: string,
   user: string,
   signal: AbortSignal
-): Promise<string> {
-  const models = [p.model, "glm-4.5-flash"].filter((m, i, a) => a.indexOf(m) === i);
-  let lastErr: unknown = new Error("untried");
-  for (const model of models) {
-    try {
-      const res = await fetch(`${p.baseUrl}/chat/completions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${p.key}` },
-        body: JSON.stringify({
-          model,
-          temperature: 0.35,
-          max_tokens: 900,
-          messages: [
-            { role: "system", content: system },
-            { role: "user", content: user },
-          ],
-        }),
-        signal,
-      });
-      if (!res.ok) {
-        lastErr = new Error(`GLM ${res.status}: ${(await res.text()).slice(0, 200)}`);
-        continue;
-      }
-      const data = await res.json();
-      const text = data?.choices?.[0]?.message?.content;
-      if (typeof text === "string" && text.trim()) return text;
-      lastErr = new Error("GLM returned empty content");
-    } catch (err) {
-      lastErr = err;
+): AsyncGenerator<string> {
+  const res = await fetch(
+    `${p.baseUrl}/models/${p.model}:streamGenerateContent?alt=sse`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": p.key },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: user }] }],
+        systemInstruction: { parts: [{ text: system }] },
+        generationConfig: { temperature: 0.35, maxOutputTokens: 700 },
+      }),
+      signal,
     }
-  }
-  throw lastErr;
-}
-
-async function callGemini(
-  p: { model: string; key: string; baseUrl: string },
-  system: string,
-  user: string,
-  signal: AbortSignal
-): Promise<string> {
-  const models = [p.model, "gemini-2.0-flash", "gemini-1.5-flash"].filter((m, i, a) => a.indexOf(m) === i);
-  let lastErr: unknown = new Error("untried");
-  for (const model of models) {
-    try {
-      const res = await fetch(
-        `${p.baseUrl}/models/${model}:generateContent?key=${p.key}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            systemInstruction: { parts: [{ text: system }] },
-            contents: [{ parts: [{ text: user }] }],
-            generationConfig: { temperature: 0.35, maxOutputTokens: 900 },
-          }),
-          signal,
-        }
-      );
-      if (!res.ok) {
-        lastErr = new Error(`Gemini ${res.status}: ${(await res.text()).slice(0, 160)}`);
-        continue;
-      }
-      const data = await res.json();
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (typeof text === "string" && text.trim()) return text;
-      lastErr = new Error("Gemini returned empty content");
-    } catch (err) {
-      lastErr = err;
-    }
-  }
-  throw lastErr;
-}
-
-/* ── parse & validate ────────────────────────────────────────── */
-const ACTION_TYPES = new Set([
-  "scroll_to_project", "scroll_to_experience", "scroll_to_expertise", "scroll_to_contact",
-  "scroll_to_notes", "scroll_to_systems", "open_resume", "open_github", "open_linkedin", "open_email",
-]);
-const PROJECT_TARGETS: Record<string, string> = {
-  malaria: "malaria-case-study",
-  automation: "outbound-automation",
-  deepfake: "deepfake-detection",
-  news: "news-nlp",
-  commerce: "b2b-commerce",
-  voice: "voice-pipeline",
-};
-const ACTION_LABELS: Record<string, string> = {
-  "scroll_to_project:malaria": "View the malaria case study →",
-  "scroll_to_project:automation": "See the automation pipeline →",
-  "scroll_to_project:deepfake": "View deepfake detection →",
-  "scroll_to_project:news": "View the news analyzer →",
-  "scroll_to_project:commerce": "View the commerce platform →",
-  "scroll_to_project:voice": "View the voice pipeline →",
-  scroll_to_experience: "View experience →",
-  scroll_to_expertise: "Open the tech map →",
-  scroll_to_contact: "Open the contact form →",
-  scroll_to_notes: "Read the engineering notes →",
-  scroll_to_systems: "Explore the system architectures →",
-  open_resume: "View resume ↓",
-  open_github: "GitHub →",
-  open_linkedin: "LinkedIn →",
-  open_email: "Email Talha →",
-};
-
-function extractJson(text: string): unknown {
-  const cleaned = text.replace(/```json|```/g, "").trim();
-  try {
-    return JSON.parse(cleaned);
-  } catch {
-    const start = cleaned.indexOf("{");
-    const end = cleaned.lastIndexOf("}");
-    if (start >= 0 && end > start) return JSON.parse(cleaned.slice(start, end + 1));
-    throw new Error("No JSON object in model output");
-  }
-}
-
-function validate(parsed: unknown): { message: string; actions: AssistantResult["actions"]; followUps: string[] } {
-  const o = parsed as Record<string, unknown>;
-  const message = typeof o.message === "string" ? o.message.trim().slice(0, 2800) : "";
-  if (message.length < 8) throw new Error("Model message missing or too short");
-
-  const rawActions = Array.isArray(o.actions) ? o.actions.slice(0, 3) : [];
-  const actions: AssistantResult["actions"] = [];
-  for (const a of rawActions) {
-    const rec = a as { type?: unknown; target?: unknown };
-    if (typeof rec.type !== "string" || !ACTION_TYPES.has(rec.type)) continue;
-    let target = typeof rec.target === "string" ? rec.target : undefined;
-    if (rec.type === "scroll_to_project") {
-      if (!target || !PROJECT_TARGETS[target]) continue;
-      target = PROJECT_TARGETS[target];
-    }
-    const label = ACTION_LABELS[rec.type === "scroll_to_project" ? `scroll_to_project:${target}` : rec.type];
-    if (!label) continue;
-    actions.push({ type: rec.type, target, label });
-  }
-
-  const followUps = Array.isArray(o.follow_ups)
-    ? o.follow_ups.filter((f): f is string => typeof f === "string" && f.trim().length > 4).slice(0, 3)
-    : [];
-
-  return { message, actions, followUps };
-}
-
-/* ── main entry ──────────────────────────────────────────────── */
-export async function askAssistant(question: string, history: Turn[]): Promise<AssistantResult> {
-  const provider = pickProvider(); // throws MissingKeyError if unconfigured
-  const intent = classifyIntent(question);
-  const evidence = buildEvidence(question, history, intent);
-
-  const system = `${SYSTEM_RULES}\n\n${JSON_CONTRACT}\n\nEVIDENCE (the only source of facts about Talha):\n${evidence}\n\n${identityBlock()}`;
-  const user = `VISITOR QUESTION: ${question}`;
-
-  console.log(
-    `[Portfolio AI] provider=${provider.name} model=${provider.model} intent=${intent} questionLen=${question.length}`
   );
+  if (!res.ok || !res.body)
+    throw new Error(`Gemini ${res.status}: ${(await res.text()).slice(0, 160)}`);
 
-  const signal = new AbortController().signal;
-  let text = "";
-  let usedModel = provider.model;
-
-  if (provider.name === "glm") {
-    text = await callGLM(
-      { model: provider.model, key: provider.key, baseUrl: provider.baseUrl },
-      system,
-      user,
-      signal
-    );
-  } else {
-    text = await callGemini(
-      { model: provider.model, key: provider.key, baseUrl: provider.baseUrl },
-      system,
-      user,
-      signal
-    );
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+    for (const line of lines) {
+      if (!line.startsWith("data:")) continue;
+      try {
+        const json = JSON.parse(line.slice(5).trim());
+        const parts = json?.candidates?.[0]?.content?.parts ?? [];
+        const text = parts.map((part: { text?: string }) => part.text ?? "").join("");
+        if (text) yield text;
+      } catch {
+        /* ignore malformed SSE line */
+      }
+    }
   }
+}
 
-  console.log(`[Portfolio AI] LLM response received (${text.length} chars)`);
+/* ── GLM fallback (non-streamed; emitted as one chunk) ───────── */
+async function callGLM(
+  p: GlmProvider,
+  system: string,
+  user: string,
+  signal: AbortSignal
+): Promise<string> {
+  const res = await fetch(`${p.baseUrl}/chat/completions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${p.key}` },
+    body: JSON.stringify({
+      model: p.model,
+      temperature: 0.35,
+      max_tokens: 700,
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: user },
+      ],
+    }),
+    signal,
+  });
+  if (!res.ok) throw new Error(`GLM ${res.status}: ${(await res.text()).slice(0, 160)}`);
+  const data = await res.json();
+  const text = data?.choices?.[0]?.message?.content;
+  if (typeof text !== "string" || !text.trim()) throw new Error("GLM returned empty content");
+  return text;
+}
 
-  const parsed = validate(extractJson(text));
-  console.log("[Portfolio AI] response validated");
+/* ── streaming orchestration ─────────────────────────────────── */
+export function streamAssistant(question: string, history: Turn[]): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
 
-  return {
-    message: parsed.message,
-    actions: parsed.actions,
-    followUps: parsed.followUps,
-    meta: { provider: provider.name, model: usedModel, intent },
-  };
+  return new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const send = (obj: unknown) => {
+        try {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
+        } catch {
+          /* stream already closed */
+        }
+      };
+      const t0 = Date.now();
+      const retrievalStart = Date.now();
+
+      try {
+        const intent = classifyIntent(question);
+        const { evidence, sectionIds } = buildEvidence(question, history, intent);
+        const retrievalMs = Date.now() - retrievalStart;
+        const actions = deriveActions(sectionIds);
+        const followUps = contextualFollowUps(sectionIds);
+
+        const providers = pickProviders();
+        const system = `${SYSTEM_RULES}\n\nEVIDENCE (the only source of facts about Talha):\n${evidence}\n\nIdentity:\n${identityBlock()}`;
+        const user = `VISITOR QUESTION: ${question}`;
+
+        send({
+          type: "meta",
+          provider: providers.gemini ? "gemini" : providers.glm ? "glm" : "none",
+          fallback_used: false,
+          retrieval_ms: retrievalMs,
+          actions,
+          follow_ups: followUps,
+        });
+
+        let usedFallback = false;
+        const providerStart = Date.now();
+
+        const emit = (chunk: string) => {
+          send({ type: "delta", text: chunk });
+        };
+
+        if (providers.gemini) {
+          try {
+            for await (const chunk of streamGeminiText(providers.gemini, system, user, abortSignal(12000))) {
+              emit(chunk);
+            }
+          } catch (err) {
+            if (!providers.glm) throw err;
+            usedFallback = true;
+            console.warn(`[Portfolio AI] gemini failed (${err instanceof Error ? err.message : err}) → glm fallback`);
+            const text = await callGLM(providers.glm, system, user, abortSignal(12000));
+            emit(text);
+          }
+        } else if (providers.glm) {
+          const text = await callGLM(providers.glm, system, user, abortSignal(12000));
+          emit(text);
+          usedFallback = true;
+        } else {
+          throw new Error("No AI provider configured");
+        }
+
+        send({
+          type: "done",
+          provider: usedFallback ? "glm" : "gemini",
+          fallback_used: usedFallback,
+          total_ms: Date.now() - t0,
+        });
+        console.log(
+          `[Portfolio AI] provider=gemini retrieval=${retrievalMs}ms provider_ms=${Date.now() - providerStart}ms total=${Date.now() - t0}ms fallback=${usedFallback}`
+        );
+      } catch (err) {
+        console.error("[Portfolio AI] failed:", err instanceof Error ? err.message : err);
+        send({
+          type: "error",
+          message:
+            err instanceof MissingKeyError
+              ? "The AI assistant isn't configured on this deployment yet."
+              : "I'm temporarily unable to analyze the portfolio right now. Please try again in a moment.",
+        });
+      } finally {
+        controller.close();
+      }
+    },
+  });
+}
+
+function abortSignal(ms: number): AbortSignal {
+  return AbortSignal.timeout(ms);
 }
