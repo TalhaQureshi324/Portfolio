@@ -225,7 +225,7 @@ async function callGemini(
         }
       );
       if (!res.ok) {
-        lastErr = new Error(`Gemini ${res.status}`);
+        lastErr = new Error(`Gemini ${res.status}: ${(await res.text()).slice(0, 160)}`);
         continue;
       }
       const data = await res.json();
