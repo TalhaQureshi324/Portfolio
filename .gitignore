@@ -5,4 +5,11 @@ out/
 next-env.d.ts
 .DS_Store
 shots/
-*.loggraft/
+*.log
+graft/
+
+# local env files — never commit API keys
+.env
+.env*.local
+.env.development.local
+.env.production.local

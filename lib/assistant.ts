@@ -78,7 +78,7 @@ export function pickProviders(): { gemini: GeminiProvider | null; glm: GlmProvid
     gemini: process.env.GEMINI_API_KEY
       ? {
           name: "gemini",
-          model: process.env.GEMINI_MODEL || "gemini-3.6-flash",
+          model: process.env.GEMINI_MODEL || "gemini-3.7-flash",
           key: process.env.GEMINI_API_KEY,
           baseUrl: "https://generativelanguage.googleapis.com/v1beta",
         }
@@ -198,7 +198,13 @@ async function* streamGeminiText(
       body: JSON.stringify({
         contents: [{ parts: [{ text: user }] }],
         systemInstruction: { parts: [{ text: system }] },
-        generationConfig: { temperature: 0.35, maxOutputTokens: 700 },
+        generationConfig: {
+          temperature: 0.35,
+          maxOutputTokens: 700,
+          // 3.x-flash cannot disable thinking (budget 0 → 400 INVALID_ARGUMENT);
+          // 128 is the smallest accepted budget, capping the thinking pass
+          thinkingConfig: { thinkingBudget: 128 },
+        },
       }),
       signal,
     }
@@ -220,7 +226,10 @@ async function* streamGeminiText(
       try {
         const json = JSON.parse(line.slice(5).trim());
         const parts = json?.candidates?.[0]?.content?.parts ?? [];
-        const text = parts.map((part: { text?: string }) => part.text ?? "").join("");
+        const text = parts
+          .filter((part: { thought?: boolean }) => !part.thought)
+          .map((part: { text?: string }) => part.text ?? "")
+          .join("");
         if (text) yield text;
       } catch {
         /* ignore malformed SSE line */
@@ -302,6 +311,8 @@ export function streamAssistant(question: string, history: Turn[]): ReadableStre
 
         if (providers.gemini) {
           try {
+            // 12s: warm Gemini answers in 2–4s; free-tier capacity queueing
+            // (or an exhausted daily pool) must bail to GLM quickly
             for await (const chunk of streamGeminiText(providers.gemini, system, user, abortSignal(12000))) {
               emit(chunk);
             }
@@ -309,11 +320,11 @@ export function streamAssistant(question: string, history: Turn[]): ReadableStre
             if (!providers.glm) throw err;
             usedFallback = true;
             console.warn(`[Portfolio AI] gemini failed (${err instanceof Error ? err.message : err}) → glm fallback`);
-            const text = await callGLM(providers.glm, system, user, abortSignal(12000));
+            const text = await callGLM(providers.glm, system, user, abortSignal(25000));
             emit(text);
           }
         } else if (providers.glm) {
-          const text = await callGLM(providers.glm, system, user, abortSignal(12000));
+          const text = await callGLM(providers.glm, system, user, abortSignal(25000));
           emit(text);
           usedFallback = true;
         } else {
